@@ -1,0 +1,87 @@
+[
+  {
+    "id": 2,
+    "_id": "3",
+    "name": "Dipanshu Sharma",
+    "email": "ds460893@gmail.com",
+    "password": "$2a$10$O/W5PwBhIW887FOoRzQL8.J/nb.tbNIDSfmTUpco8Rhg3VZ/yZLUu",
+    "phone": "7452976379",
+    "role": "user",
+    "isActive": true,
+    "createdAt": "2025-07-31T10:53:07.520Z",
+    "updatedAt": "2025-08-04T09:59:53.643Z",
+    "lastLogin": "2025-08-04T09:59:53.642Z"
+  },
+  {
+    "id": 2,
+    "_id": "3",
+    "name": "Test User",
+    "email": "test1753965174450@example.com",
+    "password": "$2a$10$466/sjDvlhsbLIn8bi8RB.u.b4i/IuzTtn/Wb5vzUbk7zM849qwrC",
+    "phone": "9876543210",
+    "role": "user",
+    "isActive": true,
+    "createdAt": "2025-07-31T12:33:04.566Z",
+    "updatedAt": "2025-07-31T12:33:04.566Z"
+  },
+  {
+    "id": 2,
+    "_id": "3",
+    "name": "Test User",
+    "email": "test@example.com",
+    "password": "$2a$10$COu3yd/NgX92e4rq4GzXNeQEYTm1Eg4dqMoTdad650vTt6sscpGXi",
+    "phone": "1234567890",
+    "role": "user",
+    "isActive": true,
+    "createdAt": "2025-07-31T12:33:19.968Z",
+    "updatedAt": "2025-07-31T12:33:19.968Z"
+  },
+  {
+    "id": 2,
+    "_id": "3",
+    "name": "Test User",
+    "email": "test1753980224675@example.com",
+    "password": "$2a$10$hV09lC4HBr19FMQBTiH4k.7QgXn6WnzA.nSxrIjKlc85Bxa3THQrS",
+    "phone": "1234567890",
+    "role": "user",
+    "isActive": true,
+    "createdAt": "2025-07-31T16:43:54.926Z",
+    "updatedAt": "2025-07-31T16:43:54.926Z"
+  },
+  {
+    "id": 2,
+    "_id": "3",
+    "name": "Test User",
+    "email": "test1754033223935@example.com",
+    "password": "$2a$10$JwDFzT/GmJomlkFhvwaJD.ZPiv8jyolbK9gLKRIw.VzTnqjprtBYa",
+    "phone": "1234567890",
+    "role": "user",
+    "isActive": true,
+    "createdAt": "2025-08-01T07:27:14.193Z",
+    "updatedAt": "2025-08-01T07:27:14.193Z"
+  },
+  {
+    "id": 2,
+    "_id": "3",
+    "name": "Test User",
+    "email": "test1754299902926@example.com",
+    "password": "$2a$10$WtOm99FppMSeWLYHhP7FG.jkHz1GC3Q0MKTXJfUE7O8ESEfQZOPbG",
+    "phone": "1234567890",
+    "role": "user",
+    "isActive": true,
+    "createdAt": "2025-08-04T09:31:53.186Z",
+    "updatedAt": "2025-08-04T09:31:53.186Z"
+  },
+  {
+    "id": 2,
+    "_id": "3",
+    "name": "Test User",
+    "email": "test1754301082490@example.com",
+    "password": "$2a$10$bvolOjyyfO4VCxQUkpEWwOCUXWwB2MlPkSmqCrjddkedo/Y89LXae",
+    "phone": "1234567890",
+    "role": "user",
+    "isActive": true,
+    "createdAt": "2025-08-04T09:51:32.670Z",
+    "updatedAt": "2025-08-04T09:51:32.670Z"
+  }
+]
