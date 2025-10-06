@@ -29,23 +29,40 @@ app.use('/api/', limiter);
 // CORS configuration - Allow multiple frontend URLs
 const allowedOrigins = [
   process.env.CLIENT_URL || 'http://localhost:3000',
-  'http://localhost:3001', // Alternative port
-  'http://localhost:3002', // Another alternative port
+  'http://localhost:3000', // Default frontend port
+  'http://localhost:3002', // Alternative port
+  'http://localhost:5173', // Vite default port
+  'http://127.0.0.1:3000',
+  'http://127.0.0.1:5173',
 ];
 
-app.use(cors({
-  origin: function (origin, callback) {
-    // Allow requests with no origin (like mobile apps or curl requests)
-    if (!origin) return callback(null, true);
-
-    if (allowedOrigins.indexOf(origin) !== -1) {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
+// More permissive CORS for development
+const corsOptions = process.env.NODE_ENV === 'development'
+  ? {
+      origin: true, // Allow all origins in development
+      credentials: true,
+      optionsSuccessStatus: 200,
+      methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+      allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
     }
-  },
-  credentials: true,
-}));
+  : {
+      origin: function (origin, callback) {
+        // Allow requests with no origin (like mobile apps or curl requests)
+        if (!origin) return callback(null, true);
+
+        if (allowedOrigins.indexOf(origin) !== -1) {
+          callback(null, true);
+        } else {
+          callback(new Error('Not allowed by CORS'));
+        }
+      },
+      credentials: true,
+      optionsSuccessStatus: 200,
+      methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+      allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+    };
+
+app.use(cors(corsOptions));
 
 // Body parsing middleware
 app.use(express.json({ limit: '10mb' }));
@@ -62,6 +79,25 @@ app.get('/api/health', (req, res) => {
     success: true,
     message: 'RestOh API is running!',
     timestamp: new Date().toISOString(),
+    cors: {
+      origin: req.headers.origin,
+      allowedOrigins: allowedOrigins,
+      environment: process.env.NODE_ENV
+    }
+  });
+});
+
+// CORS test route
+app.get('/api/cors-test', (req, res) => {
+  res.json({
+    success: true,
+    message: 'CORS is working!',
+    origin: req.headers.origin,
+    method: req.method,
+    headers: {
+      'Access-Control-Allow-Origin': res.getHeader('Access-Control-Allow-Origin'),
+      'Access-Control-Allow-Credentials': res.getHeader('Access-Control-Allow-Credentials')
+    }
   });
 });
 
@@ -93,7 +129,7 @@ const server = app.listen(PORT, () => {
 });
 
 // Handle unhandled promise rejections
-process.on('unhandledRejection', (err, promise) => {
+process.on('unhandledRejection', (err) => {
   console.log(`Error: ${err.message}`);
   // Close server & exit process
   server.close(() => {
