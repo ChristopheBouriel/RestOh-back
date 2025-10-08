@@ -4,7 +4,15 @@ const { validateRegister, validateLogin } = require('../utils/validation');
 const fileStorage = require('../utils/fileStorage');
 
 // Temporary in-memory user store for testing when DB is not available
-let tempUsers = [];
+let tempUsers = [{
+    id: 1,
+    name: 'Admin User',
+    email: 'admin@restoh.com',
+    password: '$2a$10$eCW8coLy07AnW67Li8jVveHlrQk81UqdYTwkzQoxTIgnM44OxB2mW',
+    phone: '9876543210',
+    role: 'admin',
+    createdAt: "2025-10-07T10:06:46.948Z"
+  }];
 let tempUserId = 1;
 
 // Create default admin user if not exists

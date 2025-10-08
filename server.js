@@ -32,8 +32,12 @@ const allowedOrigins = [
   'http://localhost:3000', // Default frontend port
   'http://localhost:3002', // Alternative port
   'http://localhost:5173', // Vite default port
+  'http://localhost:5174', // Vite alternative port
+  'http://localhost:5175', // Vite alternative port
   'http://127.0.0.1:3000',
   'http://127.0.0.1:5173',
+  'http://127.0.0.1:5174',
+  'http://127.0.0.1:5175',
 ];
 
 // More permissive CORS for development
