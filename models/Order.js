@@ -59,8 +59,8 @@ const OrderSchema = new mongoose.Schema({
     type: String,
     required: [true, 'Please specify order type'],
     enum: {
-      values: ['dine-in', 'takeaway', 'delivery'],
-      message: 'Order type must be dine-in, takeaway, or delivery',
+      values: ['pickup', 'delivery'],
+      message: 'Order type must be pickup or delivery',
     },
   },
   status: {
@@ -158,7 +158,7 @@ OrderSchema.methods.calculateEstimatedDeliveryTime = function() {
   // Add time based on order type
   if (this.orderType === 'delivery') {
     additionalMinutes += 20; // Additional delivery time
-  } else if (this.orderType === 'takeaway') {
+  } else if (this.orderType === 'pickup') {
     additionalMinutes += 10; // Additional packaging time
   }
 
