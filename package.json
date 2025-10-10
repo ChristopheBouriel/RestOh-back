@@ -6,7 +6,9 @@
   "scripts": {
     "start": "node server.js",
     "dev": "nodemon server.js",
-    "dev:debug": "nodemon --inspect server.js"
+    "dev:debug": "nodemon --inspect server.js",
+    "dev:clean": "./scripts/dev-start.sh",
+    "kill-port": "lsof -ti:3001 | xargs -r kill -9"
   },
   "keywords": [
     "restaurant",
