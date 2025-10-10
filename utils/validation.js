@@ -27,12 +27,14 @@ const menuSchema = Joi.object({
     description: Joi.string().min(10).max(500).required(),
     price: Joi.number().positive().required(),
     category: Joi.string().valid('appetizer', 'main', 'dessert', 'beverage').required(),
-    cuisine: Joi.string().valid('indian', 'chinese', 'italian', 'mexican', 'american', 'continental').required(),
+    cuisine: Joi.string().valid('indian', 'chinese', 'italian', 'mexican', 'american', 'continental').optional(),
+    preparationTime: Joi.number().optional(),
     isVegetarian: Joi.boolean().required(),
     isAvailable: Joi.boolean().optional(),
     ingredients: Joi.array().items(Joi.string()).optional(),
     allergens: Joi.array().items(Joi.string()).optional(),
     spiceLevel: Joi.string().valid('mild', 'medium', 'hot', 'very-hot').optional(),
+    image: Joi.string().optional(),
   });
 
 // Reservation validation

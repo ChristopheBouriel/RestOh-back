@@ -285,8 +285,7 @@ const getMenuItem = asyncHandler(async (req, res) => {
 // @route   POST /api/menu
 // @access  Private/Admin
 const createMenuItem = asyncHandler(async (req, res) => {
-  // Validate input
-  const { error } = validateMenuItem(req.body);
+  const { error } = menuSchema.validate(req.body);
   if (error) {
     return res.status(400).json({
       success: false,

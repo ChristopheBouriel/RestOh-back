@@ -31,7 +31,6 @@ const MenuItemSchema = new mongoose.Schema({
   },
   cuisine: {
     type: String,
-    required: [true, 'Please add a cuisine type'],
     enum: {
       values: ['indian', 'chinese', 'italian', 'mexican', 'american', 'continental'],
       message: 'Please select a valid cuisine type',
