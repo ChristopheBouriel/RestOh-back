@@ -1,6 +1,6 @@
 const MenuItem = require('../models/MenuItem');
 const asyncHandler = require('../utils/asyncHandler');
-const { validateMenuItem } = require('../utils/validation');
+const { menuSchema } = require('../utils/validation');
 
 // Temporary in-memory menu items for testing
 let tempMenuItems = [
@@ -128,11 +128,11 @@ const getMenuItems = asyncHandler(async (req, res) => {
     }
 
     // Filter by availability
-    if (req.query.available !== undefined) {
+    /*if (req.query.available !== undefined) {
       query.isAvailable = req.query.available === 'true';
     } else {
       query.isAvailable = true; // Default to available items only
-    }
+    }*/
 
     // Search functionality
     if (req.query.search) {
@@ -331,6 +331,15 @@ const createMenuItem = asyncHandler(async (req, res) => {
 // @access  Private/Admin
 const updateMenuItem = asyncHandler(async (req, res) => {
   try {
+
+    const toUpdate = Object.keys(req.body);
+    if(toUpdate.length < 1) {
+      return res.status(404).json({
+        success: false,
+        message: 'Nothing to modify',
+      });
+    }
+
     let menuItem = await MenuItem.findById(req.params.id);
 
     if (!menuItem) {
@@ -340,18 +349,26 @@ const updateMenuItem = asyncHandler(async (req, res) => {
       });
     }
 
-    // Validate input if provided
-    if (Object.keys(req.body).length > 0) {
-      const { error } = validateMenuItem(req.body);
+    //TODO : in case of update of the item description, verify that there is difference (could be inserted in the loop)
+
+    const newValues = Object.values(req.body);
+    const errors = [];
+    for(let i = 0; i < toUpdate.length; i++) {
+      const { error } = menuSchema.extract(toUpdate[i]).validate(newValues[i]);
       if (error) {
-        return res.status(400).json({
-          success: false,
-          message: error.details[0].message,
-        });
+        errors.push(error.details[0].message);
       }
+      
     }
 
-    menuItem = await MenuItem.findByIdAndUpdate(req.params.id, req.body, {
+    if(errors.length) {
+      return res.status(400).json({
+          success: false,
+          message: errors,
+        });
+    }
+
+    menuItem = await MenuItem.findByIdAndUpdate(req.params.id, { $set: req.body }, {
       new: true,
       runValidators: true,
     });

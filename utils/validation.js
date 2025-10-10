@@ -22,9 +22,7 @@ const validateLogin = (data) => {
   return schema.validate(data);
 };
 
-// Menu item validation
-const validateMenuItem = (data) => {
-  const schema = Joi.object({
+const menuSchema = Joi.object({
     name: Joi.string().min(2).max(100).required(),
     description: Joi.string().min(10).max(500).required(),
     price: Joi.number().positive().required(),
@@ -36,9 +34,6 @@ const validateMenuItem = (data) => {
     allergens: Joi.array().items(Joi.string()).optional(),
     spiceLevel: Joi.string().valid('mild', 'medium', 'hot', 'very-hot').optional(),
   });
-
-  return schema.validate(data);
-};
 
 // Reservation validation
 const validateReservation = (data) => {
@@ -99,7 +94,7 @@ const validateContact = (data) => {
 module.exports = {
   validateRegister,
   validateLogin,
-  validateMenuItem,
+  menuSchema,
   validateReservation,
   validateOrder,
   validateContact,
