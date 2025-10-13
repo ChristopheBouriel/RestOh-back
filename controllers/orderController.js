@@ -58,6 +58,9 @@ let tempOrderId = 4;
 // @route   POST /api/orders
 // @access  Private
 const createOrder = asyncHandler(async (req, res) => {
+
+  console.log(req.body)
+
   console.log('Creating order with data:', req.body);
   console.log('User:', req.user);
 
@@ -101,10 +104,6 @@ const createOrder = asyncHandler(async (req, res) => {
     calculatedTotal = items.reduce((total, item) => {
       return total + (item.price * item.quantity);
     }, 0);
-    // Add tax and delivery fee
-    const tax = calculatedTotal * 0.1;
-    const deliveryFee = orderType === 'delivery' && calculatedTotal < 500 ? 50 : 0;
-    calculatedTotal = calculatedTotal + tax + deliveryFee;
   }
 
   // Prepare order items
@@ -153,23 +152,20 @@ const createOrder = asyncHandler(async (req, res) => {
   try {
     // Try to create in database first
     const order = await Order.create({
-      user: req.user.id,
-      orderNumber,
+      userId: req.user.id,
+      userEmail: req.user.email,
+      userName: req.user.name,
       items: orderItems,
-      totalAmount: Math.round(calculatedTotal),
-      status: 'pending',
-      paymentStatus: paymentStatus || 'completed',
-      paymentMethod: paymentMethod || 'online',
+      totalPrice: Math.round(calculatedTotal),
       orderType,
-      deliveryAddress: orderType === 'delivery' ? deliveryAddress : undefined,
-      phone: phone || req.user.phone,
-      specialInstructions: specialInstructions || '',
-      transactionId: transactionId || null,
+      paymentStatus: paymentStatus || 'pending',
+      paymentMethod: paymentMethod || 'cash',
+      deliveryAddress: orderType === 'delivery' ? deliveryAddress : null,
+      notes: specialInstructions || null,
     });
 
-    // Populate order with user details
-    const populatedOrder = await Order.findById(order._id)
-      .populate('user', 'name email phone');
+    // Order created successfully in MongoDB
+    console.log('Order created in MongoDB:', order._id);
 
     // Also add to temp storage for admin demo
     // Also add to persistent file storage
@@ -183,7 +179,7 @@ const createOrder = asyncHandler(async (req, res) => {
     res.status(201).json({
       success: true,
       message: 'Order created successfully',
-      data: populatedOrder,
+      data: order,
     });
   } catch (error) {
     console.error('Database order creation failed, using persistent storage...', error);

@@ -43,18 +43,20 @@ const ReservationSchema = new mongoose.Schema({
     type: Number,
     min: [1, 'Table number must be at least 1'],
     max: [50, 'Table number cannot exceed 50'],
+    default: null,
   },
   specialRequest: {
     type: String,
     maxlength: [200, 'Special request cannot exceed 200 characters'],
+    default: null,
   },
   occasion: {
     type: String,
     enum: {
-      values: ['birthday', 'anniversary', 'date', 'business', 'family', 'celebration', 'other', ''],
+      values: ['birthday', 'anniversary', 'date', 'business', 'family', 'celebration', 'other'],
       message: 'Please select a valid occasion'
     },
-    default: '',
+    default: null,
   },
   contactPhone: {
     type: String,
@@ -87,6 +89,7 @@ const ReservationSchema = new mongoose.Schema({
   notes: {
     type: String,
     maxlength: [300, 'Notes cannot exceed 300 characters'],
+    default: null,
   },
   reminderSent: {
     type: Boolean,
@@ -98,18 +101,22 @@ const ReservationSchema = new mongoose.Schema({
   },
   checkedInAt: {
     type: Date,
+    default: null,
   },
   completedAt: {
     type: Date,
+    default: null,
   },
   rating: {
     type: Number,
     min: [1, 'Rating must be at least 1'],
     max: [5, 'Rating cannot be more than 5'],
+    default: null,
   },
   review: {
     type: String,
     maxlength: [300, 'Review cannot exceed 300 characters'],
+    default: null,
   },
 }, {
   timestamps: true,

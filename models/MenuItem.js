@@ -19,7 +19,7 @@ const MenuItemSchema = new mongoose.Schema({
   },
   image: {
     type: String,
-    default: 'default-food.jpg',
+    default: null,
   },
   category: {
     type: String,
@@ -32,21 +32,14 @@ const MenuItemSchema = new mongoose.Schema({
   cuisine: {
     type: String,
     enum: {
-      values: ['indian', 'chinese', 'italian', 'mexican', 'american', 'continental'],
+      values: ['asian', 'lao', 'continental'],
       message: 'Please select a valid cuisine type',
     },
+    default: null,
   },
   isVegetarian: {
     type: Boolean,
-    required: [true, 'Please specify if the item is vegetarian'],
-  },
-  isVegan: {
-    type: Boolean,
-    default: false,
-  },
-  isGlutenFree: {
-    type: Boolean,
-    default: false,
+    default: null,
   },
   isAvailable: {
     type: Boolean,
@@ -58,27 +51,13 @@ const MenuItemSchema = new mongoose.Schema({
   }],
   allergens: [{
     type: String,
-    enum: ['nuts', 'dairy', 'eggs', 'soy', 'wheat', 'shellfish', 'fish'],
+    trim: true,
+
   }],
-  spiceLevel: {
-    type: String,
-    enum: ['mild', 'medium', 'hot', 'very-hot'],
-    default: 'mild',
-  },
   preparationTime: {
     type: Number, // in minutes
     default: 15,
     min: [1, 'Preparation time must be at least 1 minute'],
-  },
-  calories: {
-    type: Number,
-    min: [0, 'Calories cannot be negative'],
-  },
-  nutritionInfo: {
-    protein: Number,
-    carbs: Number,
-    fat: Number,
-    fiber: Number,
   },
   rating: {
     average: {

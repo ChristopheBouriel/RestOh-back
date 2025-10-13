@@ -28,35 +28,29 @@ const UserSchema = new mongoose.Schema({
   phone: {
     type: String,
     match: [/^[0-9]{10}$/, 'Please add a valid phone number'],
+    default: null,
   },
   role: {
     type: String,
     enum: ['user', 'admin'],
     default: 'user',
   },
-  avatar: {
-    type: String,
-    default: 'default-avatar.png',
-  },
   address: {
-    street: String,
-    city: String,
-    state: String,
-    zipCode: String,
-  },
-  preferences: {
-    dietary: [{
+    street: {
       type: String,
-      enum: ['vegetarian', 'vegan', 'gluten-free', 'dairy-free', 'nut-free'],
-    }],
-    cuisines: [{
+      default: null,
+    },
+    city: {
       type: String,
-      enum: ['indian', 'chinese', 'italian', 'mexican', 'american', 'continental'],
-    }],
-    spiceLevel: {
+      default: null,
+    },
+    state: {
       type: String,
-      enum: ['mild', 'medium', 'hot', 'very-hot'],
-      default: 'medium',
+      default: null,
+    },
+    zipCode: {
+      type: String,
+      default: null,
     },
   },
   isActive: {
@@ -65,6 +59,7 @@ const UserSchema = new mongoose.Schema({
   },
   lastLogin: {
     type: Date,
+    default: null,
   },
 }, {
   timestamps: true,
