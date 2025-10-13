@@ -58,9 +58,6 @@ let tempOrderId = 4;
 // @route   POST /api/orders
 // @access  Private
 const createOrder = asyncHandler(async (req, res) => {
-
-  console.log(req.body)
-
   console.log('Creating order with data:', req.body);
   console.log('User:', req.user);
 
@@ -166,15 +163,6 @@ const createOrder = asyncHandler(async (req, res) => {
 
     // Order created successfully in MongoDB
     console.log('Order created in MongoDB:', order._id);
-
-    // Also add to temp storage for admin demo
-    // Also add to persistent file storage
-    fileStorage.addOrder(newOrder);
-
-    // Add to temp storage for backward compatibility
-    tempOrders.unshift(newOrder);
-
-    console.log('Order created successfully in database:', order._id);
 
     res.status(201).json({
       success: true,

@@ -9,6 +9,7 @@ const {
   getPopularItems,
 } = require('../controllers/menuController');
 const { protect, authorize } = require('../middleware/auth');
+const { uploadSingleImage, handleUploadError } = require('../middleware/imageUpload');
 
 const router = express.Router();
 
@@ -21,8 +22,8 @@ router.get('/:id', getMenuItem);
 router.post('/:id/reviews', protect, addReview);
 
 // Admin only routes
-router.post('/', protect, authorize('admin'), createMenuItem);
-router.put('/:id', protect, authorize('admin'), updateMenuItem);
+router.post('/', protect, authorize('admin'), uploadSingleImage, handleUploadError, createMenuItem);
+router.put('/:id', protect, authorize('admin'), uploadSingleImage, handleUploadError, updateMenuItem);
 router.delete('/:id', protect, authorize('admin'), deleteMenuItem);
 
 module.exports = router;

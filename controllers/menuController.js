@@ -1,6 +1,7 @@
 const MenuItem = require('../models/MenuItem');
 const asyncHandler = require('../utils/asyncHandler');
 const { menuSchema } = require('../utils/validation');
+const { getImageUrl, deleteUploadedFile } = require('../middleware/imageUpload');
 
 // Temporary in-memory menu items for testing
 let tempMenuItems = [
@@ -285,8 +286,33 @@ const getMenuItem = asyncHandler(async (req, res) => {
 // @route   POST /api/menu
 // @access  Private/Admin
 const createMenuItem = asyncHandler(async (req, res) => {
+  // Parse JSON arrays from FormData
+  if (req.body.allergens && typeof req.body.allergens === 'string') {
+    try {
+      req.body.allergens = JSON.parse(req.body.allergens);
+    } catch (e) {
+      req.body.allergens = [];
+    }
+  }
+  if (req.body.ingredients && typeof req.body.ingredients === 'string') {
+    try {
+      req.body.ingredients = JSON.parse(req.body.ingredients);
+    } catch (e) {
+      req.body.ingredients = [];
+    }
+  }
+
+  // Handle uploaded image
+  if (req.file) {
+    req.body.image = getImageUrl(req, req.file.filename);
+  }
+
   const { error } = menuSchema.validate(req.body);
   if (error) {
+    // Clean up uploaded file if validation fails
+    if (req.file) {
+      deleteUploadedFile(req.file.filename);
+    }
     return res.status(400).json({
       success: false,
       message: error.details[0].message,
@@ -330,21 +356,50 @@ const createMenuItem = asyncHandler(async (req, res) => {
 // @access  Private/Admin
 const updateMenuItem = asyncHandler(async (req, res) => {
   try {
-
-    const toUpdate = Object.keys(req.body);
-    if(toUpdate.length < 1) {
-      return res.status(404).json({
-        success: false,
-        message: 'Nothing to modify',
-      });
+    // Parse JSON arrays from FormData
+    if (req.body.allergens && typeof req.body.allergens === 'string') {
+      try {
+        req.body.allergens = JSON.parse(req.body.allergens);
+      } catch (e) {
+        req.body.allergens = [];
+      }
+    }
+    if (req.body.ingredients && typeof req.body.ingredients === 'string') {
+      try {
+        req.body.ingredients = JSON.parse(req.body.ingredients);
+      } catch (e) {
+        req.body.ingredients = [];
+      }
     }
 
     let menuItem = await MenuItem.findById(req.params.id);
 
     if (!menuItem) {
+      // Clean up uploaded file if item not found
+      if (req.file) {
+        deleteUploadedFile(req.file.filename);
+      }
       return res.status(404).json({
         success: false,
         message: 'Menu item not found',
+      });
+    }
+
+    // Handle uploaded image
+    let oldImageFilename = null;
+    if (req.file) {
+      // Extract old filename to delete it later
+      if (menuItem.image && menuItem.image.includes('/uploads/menu-items/')) {
+        oldImageFilename = menuItem.image.split('/').pop();
+      }
+      req.body.image = getImageUrl(req, req.file.filename);
+    }
+
+    const toUpdate = Object.keys(req.body);
+    if(toUpdate.length < 1 && !req.file) {
+      return res.status(400).json({
+        success: false,
+        message: 'Nothing to modify',
       });
     }
 
@@ -371,6 +426,11 @@ const updateMenuItem = asyncHandler(async (req, res) => {
       new: true,
       runValidators: true,
     });
+
+    // Delete old image file if new image was uploaded
+    if (oldImageFilename) {
+      deleteUploadedFile(oldImageFilename);
+    }
 
     res.status(200).json({
       success: true,
