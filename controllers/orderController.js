@@ -350,7 +350,7 @@ const updateOrderStatus = asyncHandler(async (req, res) => {
   const { status } = req.body;
 
   const validStatuses = ['pending', 'confirmed', 'preparing', 'ready', 'out-for-delivery', 'delivered', 'cancelled'];
-  
+
   if (!validStatuses.includes(status)) {
     return res.status(400).json({
       success: false,
@@ -358,29 +358,110 @@ const updateOrderStatus = asyncHandler(async (req, res) => {
     });
   }
 
-  const order = await Order.findById(req.params.id);
+  try {
+    // Try MongoDB first
+    const order = await Order.findById(req.params.id);
 
-  if (!order) {
-    return res.status(404).json({
-      success: false,
-      message: 'Order not found',
+    if (!order) {
+      // If not found in MongoDB, try file storage
+      console.log('Order not found in MongoDB, trying file storage...');
+      const fileOrder = fileStorage.findOrderById(req.params.id);
+
+      if (!fileOrder) {
+        return res.status(404).json({
+          success: false,
+          message: 'Order not found',
+        });
+      }
+
+      // Update in file storage
+      const updateData = {
+        status,
+        updatedAt: new Date()
+      };
+
+      // Set actual delivery time if delivered
+      if (status === 'delivered') {
+        updateData.actualDeliveryTime = new Date();
+      }
+
+      const updatedOrder = fileStorage.updateOrder(req.params.id, updateData);
+
+      if (!updatedOrder) {
+        return res.status(500).json({
+          success: false,
+          message: 'Failed to update order status in file storage',
+        });
+      }
+
+      console.log(`✅ Order status updated successfully in file storage: ${req.params.id}`);
+
+      return res.status(200).json({
+        success: true,
+        message: 'Order status updated successfully',
+        data: updatedOrder,
+      });
+    }
+
+    // Update in MongoDB
+    order.status = status;
+
+    // Set actual delivery time if delivered
+    if (status === 'delivered') {
+      order.actualDeliveryTime = new Date();
+    }
+
+    await order.save();
+
+    console.log(`✅ Order status updated successfully in MongoDB: ${req.params.id}`);
+
+    res.status(200).json({
+      success: true,
+      message: 'Order status updated successfully',
+      data: order,
+    });
+
+  } catch (error) {
+    console.log('MongoDB error, trying file storage fallback...', error.message);
+
+    // Fallback to file storage
+    const fileOrder = fileStorage.findOrderById(req.params.id);
+
+    if (!fileOrder) {
+      return res.status(404).json({
+        success: false,
+        message: 'Order not found',
+      });
+    }
+
+    // Update in file storage
+    const updateData = {
+      status,
+      updatedAt: new Date()
+    };
+
+    // Set actual delivery time if delivered
+    if (status === 'delivered') {
+      updateData.actualDeliveryTime = new Date();
+    }
+
+    const updatedOrder = fileStorage.updateOrder(req.params.id, updateData);
+
+    if (!updatedOrder) {
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to update order status in file storage',
+      });
+    }
+
+    console.log(`✅ Order status updated successfully in file storage (fallback): ${req.params.id}`);
+
+    res.status(200).json({
+      success: true,
+      message: 'Order status updated successfully',
+      data: updatedOrder,
     });
   }
-
-  order.status = status;
-
-  // Set actual delivery time if delivered
-  if (status === 'delivered') {
-    order.actualDeliveryTime = new Date();
-  }
-
-  await order.save();
-
-  res.status(200).json({
-    success: true,
-    message: 'Order status updated successfully',
-    data: order,
-  });
 });
 
 // @desc    Cancel order
@@ -632,11 +713,31 @@ const updateAdminOrderStatus = asyncHandler(async (req, res) => {
      .populate('items.menuItem', 'name price');
 
     if (!order) {
-      return res.status(404).json({
-        success: false,
-        message: 'Order not found',
+      // If not found in MongoDB, try file storage
+      console.log('Order not found in MongoDB, trying file storage...');
+
+      const updatedOrder = fileStorage.updateOrder(req.params.id, {
+        status,
+        updatedAt: new Date(),
+      });
+
+      if (!updatedOrder) {
+        return res.status(404).json({
+          success: false,
+          message: 'Order not found',
+        });
+      }
+
+      console.log(`✅ Order status updated successfully in file storage: ${req.params.id}`);
+
+      return res.status(200).json({
+        success: true,
+        message: 'Order status updated successfully',
+        data: updatedOrder,
       });
     }
+
+    console.log(`✅ Order status updated successfully in MongoDB: ${req.params.id}`);
 
     res.status(200).json({
       success: true,
