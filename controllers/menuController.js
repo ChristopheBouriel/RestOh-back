@@ -3,269 +3,69 @@ const asyncHandler = require('../utils/asyncHandler');
 const { menuSchema } = require('../utils/validation');
 const { deleteImage } = require('../middleware/cloudinaryUpload');
 
-// Temporary in-memory menu items for testing
-let tempMenuItems = [
-  {
-    _id: '1',
-    name: 'Butter Chicken',
-    description: 'Tender chicken in a rich, creamy tomato-based sauce with aromatic spices',
-    price: 450,
-    category: 'main',
-    cuisine: 'indian',
-    isVegetarian: false,
-    image: 'https://images.unsplash.com/photo-1565557623262-b51c2513a641?w=400',
-    spiceLevel: 'medium',
-    isAvailable: true,
-    orderCount: 0,
-    rating: { average: 0, count: 0 },
-    reviews: [],
-    createdAt: new Date(),
-  },
-  {
-    _id: '2',
-    name: 'Paneer Tikka Masala',
-    description: 'Grilled cottage cheese cubes in a flavorful tomato and onion gravy',
-    price: 380,
-    category: 'main',
-    cuisine: 'indian',
-    isVegetarian: true,
-    image: 'https://images.unsplash.com/photo-1631452180519-c014fe946bc7?w=400',
-    spiceLevel: 'mild',
-    isAvailable: true,
-    orderCount: 0,
-    rating: { average: 0, count: 0 },
-    reviews: [],
-    createdAt: new Date(),
-  },
-  {
-    _id: '3',
-    name: 'Margherita Pizza',
-    description: 'Classic pizza with fresh mozzarella, tomatoes, and basil',
-    price: 520,
-    category: 'main',
-    cuisine: 'italian',
-    isVegetarian: true,
-    image: 'https://images.unsplash.com/photo-1604382354936-07c5d9983bd3?w=400',
-    spiceLevel: 'mild',
-    isAvailable: true,
-    orderCount: 0,
-    rating: { average: 0, count: 0 },
-    reviews: [],
-    createdAt: new Date(),
-  },
-  {
-    _id: '4',
-    name: 'Chicken Biryani',
-    description: 'Fragrant basmati rice layered with spiced chicken and aromatic herbs',
-    price: 480,
-    category: 'main',
-    cuisine: 'indian',
-    isVegetarian: false,
-    image: 'https://images.unsplash.com/photo-1563379091339-03246963d96c?w=400',
-    spiceLevel: 'medium',
-    isAvailable: true,
-    orderCount: 0,
-    rating: { average: 0, count: 0 },
-    reviews: [],
-    createdAt: new Date(),
-  },
-  {
-    _id: '5',
-    name: 'Caesar Salad',
-    description: 'Crisp romaine lettuce with parmesan cheese, croutons, and Caesar dressing',
-    price: 320,
-    category: 'appetizer',
-    cuisine: 'continental',
-    isVegetarian: true,
-    image: 'https://images.unsplash.com/photo-1546793665-c74683f339c1?w=400',
-    spiceLevel: 'mild',
-    isAvailable: true,
-    orderCount: 0,
-    rating: { average: 0, count: 0 },
-    reviews: [],
-    createdAt: new Date(),
-  },
-  {
-    _id: '6',
-    name: 'Chocolate Lava Cake',
-    description: 'Warm chocolate cake with a molten chocolate center, served with vanilla ice cream',
-    price: 280,
-    category: 'dessert',
-    cuisine: 'continental',
-    isVegetarian: true,
-    image: 'https://images.unsplash.com/photo-1606313564200-e75d5e30476c?w=400',
-    spiceLevel: 'mild',
-    isAvailable: true,
-    orderCount: 0,
-    rating: { average: 0, count: 0 },
-    reviews: [],
-    createdAt: new Date(),
-  },
-];
-
-let tempMenuItemId = 7;
-
-// @desc    Get all menu items
+// @desc    Get all menu items with filters and pagination
 // @route   GET /api/menu
 // @access  Public
 const getMenuItems = asyncHandler(async (req, res) => {
-  try {
-    // Try MongoDB first
-    let query = {};
+  const page = parseInt(req.query.page, 10) || 1;
+  const limit = parseInt(req.query.limit, 10) || 20;
+  const startIndex = (page - 1) * limit;
 
-    // Filter by category
-    if (req.query.category) {
-      query.category = req.query.category;
-    }
+  const { category, vegetarian, search } = req.query;
 
-    // Filter by cuisine
-    if (req.query.cuisine) {
-      query.cuisine = req.query.cuisine;
-    }
+  let query = {};
 
-    // Filter by vegetarian
-    if (req.query.vegetarian) {
-      query.isVegetarian = req.query.vegetarian === 'true';
-    }
-
-    // Filter by availability
-    if (req.query.available) {
-      query.isAvailable = req.query.available === 'true';
-    }
-
-    // Search functionality
-    if (req.query.search) {
-      query.$text = { $search: req.query.search };
-    }
-
-    // Price range filter
-    if (req.query.minPrice || req.query.maxPrice) {
-      query.price = {};
-      if (req.query.minPrice) {
-        query.price.$gte = parseFloat(req.query.minPrice);
-      }
-      if (req.query.maxPrice) {
-        query.price.$lte = parseFloat(req.query.maxPrice);
-      }
-    }
-
-    // Sorting
-    let sortBy = {};
-    if (req.query.sort) {
-      const sortField = req.query.sort;
-      const sortOrder = req.query.order === 'desc' ? -1 : 1;
-      sortBy[sortField] = sortOrder;
-    } else {
-      sortBy = { createdAt: -1 }; // Default sort by newest
-    }
-
-    // Pagination
-    const page = parseInt(req.query.page, 10) || 1;
-    const limit = parseInt(req.query.limit, 10) || 20;
-    const startIndex = (page - 1) * limit;
-
-    const total = await MenuItem.countDocuments(query);
-    const menuItems = await MenuItem.find(query)
-      .sort(sortBy)
-      .limit(limit)
-      .skip(startIndex);
-
-    // Pagination result
-    const pagination = {};
-    if (startIndex + limit < total) {
-      pagination.next = {
-        page: page + 1,
-        limit,
-      };
-    }
-    if (startIndex > 0) {
-      pagination.prev = {
-        page: page - 1,
-        limit,
-      };
-    }
-
-    res.status(200).json({
-      success: true,
-      count: menuItems.length,
-      total,
-      pagination,
-      data: menuItems,
-    });
-  } catch (dbError) {
-    // Fallback to temp storage
-    console.log('Using temp storage for menu items...');
-
-    let filteredItems = [...tempMenuItems];
-
-    // Apply filters
-    if (req.query.category) {
-      filteredItems = filteredItems.filter(item => item.category === req.query.category);
-    }
-    if (req.query.cuisine) {
-      filteredItems = filteredItems.filter(item => item.cuisine === req.query.cuisine);
-    }
-    if (req.query.vegetarian) {
-      filteredItems = filteredItems.filter(item => item.isVegetarian === (req.query.vegetarian === 'true'));
-    }
-    if (req.query.available !== undefined) {
-      filteredItems = filteredItems.filter(item => item.isAvailable === (req.query.available === 'true'));
-    } else {
-      filteredItems = filteredItems.filter(item => item.isAvailable === true);
-    }
-    if (req.query.search) {
-      const searchTerm = req.query.search.toLowerCase();
-      filteredItems = filteredItems.filter(item =>
-        item.name.toLowerCase().includes(searchTerm) ||
-        item.description.toLowerCase().includes(searchTerm)
-      );
-    }
-    if (req.query.minPrice) {
-      filteredItems = filteredItems.filter(item => item.price >= parseFloat(req.query.minPrice));
-    }
-    if (req.query.maxPrice) {
-      filteredItems = filteredItems.filter(item => item.price <= parseFloat(req.query.maxPrice));
-    }
-
-    // Pagination
-    const page = parseInt(req.query.page, 10) || 1;
-    const limit = parseInt(req.query.limit, 10) || 20;
-    const startIndex = (page - 1) * limit;
-    const endIndex = startIndex + limit;
-
-    const paginatedItems = filteredItems.slice(startIndex, endIndex);
-    const total = filteredItems.length;
-
-    // Pagination result
-    const pagination = {};
-    if (endIndex < total) {
-      pagination.next = {
-        page: page + 1,
-        limit,
-      };
-    }
-    if (startIndex > 0) {
-      pagination.prev = {
-        page: page - 1,
-        limit,
-      };
-    }
-
-    res.status(200).json({
-      success: true,
-      count: paginatedItems.length,
-      total,
-      pagination,
-      data: paginatedItems,
-    });
+  if (category) {
+    query.category = category;
   }
+
+  if (vegetarian === 'true') {
+    query.isVegetarian = true;
+  } else if (vegetarian === 'false') {
+    query.isVegetarian = false;
+  }
+
+  if (search) {
+    query.$or = [
+      { name: { $regex: search, $options: 'i' } },
+      { description: { $regex: search, $options: 'i' } },
+    ];
+  }
+
+  const total = await MenuItem.countDocuments(query);
+  const menuItems = await MenuItem.find(query)
+    .sort({ createdAt: -1 })
+    .limit(limit)
+    .skip(startIndex);
+
+  const pagination = {};
+  if (startIndex + limit < total) {
+    pagination.next = {
+      page: page + 1,
+      limit,
+    };
+  }
+  if (startIndex > 0) {
+    pagination.prev = {
+      page: page - 1,
+      limit,
+    };
+  }
+
+  res.status(200).json({
+    success: true,
+    count: menuItems.length,
+    total,
+    pagination,
+    data: menuItems,
+  });
 });
 
 // @desc    Get single menu item
 // @route   GET /api/menu/:id
 // @access  Public
 const getMenuItem = asyncHandler(async (req, res) => {
-  const menuItem = await MenuItem.findById(req.params.id).populate('reviews.user', 'name avatar');
+  const menuItem = await MenuItem.findById(req.params.id);
 
   if (!menuItem) {
     return res.status(404).json({
@@ -280,258 +80,95 @@ const getMenuItem = asyncHandler(async (req, res) => {
   });
 });
 
-// @desc    Create menu item
+// @desc    Create new menu item
 // @route   POST /api/menu
 // @access  Private/Admin
 const createMenuItem = asyncHandler(async (req, res) => {
-  // Parse JSON arrays from FormData
-  if (req.body.allergens && typeof req.body.allergens === 'string') {
-    try {
-      req.body.allergens = JSON.parse(req.body.allergens);
-    } catch (e) {
-      req.body.allergens = [];
-    }
-  }
-  if (req.body.ingredients && typeof req.body.ingredients === 'string') {
-    try {
-      req.body.ingredients = JSON.parse(req.body.ingredients);
-    } catch (e) {
-      req.body.ingredients = [];
-    }
-  }
-
-  // Handle uploaded image (Cloudinary middleware already sets req.body.image)
-  // Also set cloudinaryPublicId for new items
-  if (req.cloudinaryPublicId) {
-    req.body.cloudinaryPublicId = req.cloudinaryPublicId;
-  }
-
   const { error } = menuSchema.validate(req.body);
   if (error) {
-    // Clean up Cloudinary image if validation fails
-    if (req.cloudinaryPublicId) {
-      deleteImage(req.cloudinaryPublicId).catch(err =>
-        console.log('Error deleting Cloudinary image:', err)
-      );
-    }
     return res.status(400).json({
       success: false,
-      message: error.details[0].message,
+      message: `Validation error: ${error.details[0].message}`,
     });
   }
 
-  try {
-    const menuItem = await MenuItem.create(req.body);
+  const menuItem = await MenuItem.create(req.body);
 
-    res.status(201).json({
-      success: true,
-      message: 'Menu item created successfully',
-      data: menuItem,
-    });
-  } catch (dbError) {
-    // Fallback to temp storage
-    console.log('Using temp storage for creating menu item...');
-
-    const newMenuItem = {
-      _id: tempMenuItemId++,
-      ...req.body,
-      orderCount: 0,
-      rating: { average: 0, count: 0 },
-      reviews: [],
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    };
-
-    tempMenuItems.push(newMenuItem);
-
-    res.status(201).json({
-      success: true,
-      message: 'Menu item created successfully (temp storage)',
-      data: newMenuItem,
-    });
-  }
+  res.status(201).json({
+    success: true,
+    message: 'Menu item created successfully',
+    data: menuItem,
+  });
 });
 
 // @desc    Update menu item
 // @route   PUT /api/menu/:id
 // @access  Private/Admin
 const updateMenuItem = asyncHandler(async (req, res) => {
-  try {
-    // Parse JSON arrays from FormData
-    if (req.body.allergens && typeof req.body.allergens === 'string') {
-      try {
-        req.body.allergens = JSON.parse(req.body.allergens);
-      } catch (e) {
-        req.body.allergens = [];
-      }
-    }
-    if (req.body.ingredients && typeof req.body.ingredients === 'string') {
-      try {
-        req.body.ingredients = JSON.parse(req.body.ingredients);
-      } catch (e) {
-        req.body.ingredients = [];
-      }
-    }
-
-    let menuItem = await MenuItem.findById(req.params.id);
-
-    if (!menuItem) {
-      // Clean up Cloudinary image if item not found
-      if (req.cloudinaryPublicId) {
-        deleteImage(req.cloudinaryPublicId).catch(err =>
-          console.log('Error deleting Cloudinary image:', err)
-        );
-      }
-      return res.status(404).json({
-        success: false,
-        message: 'Menu item not found',
-      });
-    }
-
-    // Handle uploaded image
-    let oldCloudinaryPublicId = null;
-    if (req.file) {
-      // Store old Cloudinary public ID to delete it later
-      if (menuItem.cloudinaryPublicId) {
-        oldCloudinaryPublicId = menuItem.cloudinaryPublicId;
-      }
-    }
-
-    const toUpdate = Object.keys(req.body);
-    if(toUpdate.length < 1 && !req.file) {
+  if (Object.keys(req.body).length > 0) {
+    const { error } = menuSchema.validate(req.body, { allowUnknown: true });
+    if (error) {
       return res.status(400).json({
         success: false,
-        message: 'Nothing to modify',
+        message: `Validation error: ${error.details[0].message}`,
       });
     }
+  }
 
-    //TODO : in case of update of the item description, verify that there is difference (could be inserted in the loop)
-
-    const newValues = Object.values(req.body);
-    const errors = [];
-    for(let i = 0; i < toUpdate.length; i++) {
-      const { error } = menuSchema.extract(toUpdate[i]).validate(newValues[i]);
-      if (error) {
-        errors.push(error.details[0].message);
-      }
-      
-    }
-
-    if(errors.length) {
-      return res.status(400).json({
-          success: false,
-          message: errors,
-        });
-    }
-
-    menuItem = await MenuItem.findByIdAndUpdate(req.params.id, { $set: req.body }, {
+  const menuItem = await MenuItem.findByIdAndUpdate(
+    req.params.id,
+    req.body,
+    {
       new: true,
       runValidators: true,
-    });
-
-    // Delete old Cloudinary image if new image was uploaded
-    if (oldCloudinaryPublicId) {
-      deleteImage(oldCloudinaryPublicId).catch(err =>
-        console.log('Error deleting old Cloudinary image:', err)
-      );
     }
+  );
 
-    res.status(200).json({
-      success: true,
-      message: 'Menu item updated successfully',
-      data: menuItem,
-    });
-  } catch (dbError) {
-    // Fallback to temp storage
-    console.log('Using temp storage for updating menu item...');
-
-    const itemIndex = tempMenuItems.findIndex(item => item._id == req.params.id);
-
-    if (itemIndex === -1) {
-      return res.status(404).json({
-        success: false,
-        message: 'Menu item not found',
-      });
-    }
-
-    // Validate input if provided
-    if (Object.keys(req.body).length > 0) {
-      const { error } = validateMenuItem(req.body);
-      if (error) {
-        return res.status(400).json({
-          success: false,
-          message: error.details[0].message,
-        });
-      }
-    }
-
-    // Update the item
-    tempMenuItems[itemIndex] = {
-      ...tempMenuItems[itemIndex],
-      ...req.body,
-      updatedAt: new Date(),
-    };
-
-    res.status(200).json({
-      success: true,
-      message: 'Menu item updated successfully (temp storage)',
-      data: tempMenuItems[itemIndex],
+  if (!menuItem) {
+    return res.status(404).json({
+      success: false,
+      message: 'Menu item not found',
     });
   }
+
+  res.status(200).json({
+    success: true,
+    message: 'Menu item updated successfully',
+    data: menuItem,
+  });
 });
 
 // @desc    Delete menu item
 // @route   DELETE /api/menu/:id
 // @access  Private/Admin
 const deleteMenuItem = asyncHandler(async (req, res) => {
-  try {
-    const menuItem = await MenuItem.findById(req.params.id);
+  const menuItem = await MenuItem.findById(req.params.id);
 
-    if (!menuItem) {
-      return res.status(404).json({
-        success: false,
-        message: 'Menu item not found',
-      });
-    }
-
-    // Clean up Cloudinary image if it exists
-    if (menuItem.cloudinaryPublicId) {
-      deleteImage(menuItem.cloudinaryPublicId).catch(err =>
-        console.log('Error deleting Cloudinary image:', err)
-      );
-    }
-
-    await MenuItem.findByIdAndDelete(req.params.id);
-
-    res.status(200).json({
-      success: true,
-      message: 'Menu item deleted successfully',
-    });
-  } catch (dbError) {
-    // Fallback to temp storage
-    console.log('Using temp storage for deleting menu item...');
-
-    const itemIndex = tempMenuItems.findIndex(item => item._id == req.params.id);
-
-    if (itemIndex === -1) {
-      return res.status(404).json({
-        success: false,
-        message: 'Menu item not found',
-      });
-    }
-
-    // Remove the item
-    tempMenuItems.splice(itemIndex, 1);
-
-    res.status(200).json({
-      success: true,
-      message: 'Menu item deleted successfully (temp storage)',
+  if (!menuItem) {
+    return res.status(404).json({
+      success: false,
+      message: 'Menu item not found',
     });
   }
+
+  if (menuItem.cloudinaryPublicId) {
+    try {
+      await deleteImage(menuItem.cloudinaryPublicId);
+    } catch (error) {
+      console.log('Error deleting image from Cloudinary:', error);
+    }
+  }
+
+  await MenuItem.findByIdAndDelete(req.params.id);
+
+  res.status(200).json({
+    success: true,
+    message: 'Menu item deleted successfully',
+  });
 });
 
 // @desc    Add review to menu item
-// @route   POST /api/menu/:id/reviews
+// @route   POST /api/menu/:id/review
 // @access  Private
 const addReview = asyncHandler(async (req, res) => {
   const { rating, comment } = req.body;
@@ -539,7 +176,7 @@ const addReview = asyncHandler(async (req, res) => {
   if (!rating || rating < 1 || rating > 5) {
     return res.status(400).json({
       success: false,
-      message: 'Please provide a rating between 1 and 5',
+      message: 'Rating must be between 1 and 5',
     });
   }
 
@@ -552,9 +189,8 @@ const addReview = asyncHandler(async (req, res) => {
     });
   }
 
-  // Check if user already reviewed this item
   const existingReview = menuItem.reviews.find(
-    review => review.user.toString() === req.user.id
+    (review) => review.user.toString() === req.user.id
   );
 
   if (existingReview) {
@@ -564,17 +200,16 @@ const addReview = asyncHandler(async (req, res) => {
     });
   }
 
-  // Add review
-  menuItem.reviews.push({
+  const newReview = {
     user: req.user.id,
     rating,
     comment,
-  });
+  };
 
-  // Calculate new average rating
+  menuItem.reviews.push(newReview);
   await menuItem.calculateAverageRating();
 
-  res.status(201).json({
+  res.status(200).json({
     success: true,
     message: 'Review added successfully',
     data: menuItem,
@@ -585,9 +220,11 @@ const addReview = asyncHandler(async (req, res) => {
 // @route   GET /api/menu/popular
 // @access  Public
 const getPopularItems = asyncHandler(async (req, res) => {
+  const limit = parseInt(req.query.limit, 10) || 6;
+
   const popularItems = await MenuItem.find({ isAvailable: true })
-    .sort({ orderCount: -1, 'rating.average': -1 })
-    .limit(8);
+    .sort({ orderCount: -1 })
+    .limit(limit);
 
   res.status(200).json({
     success: true,
@@ -595,9 +232,6 @@ const getPopularItems = asyncHandler(async (req, res) => {
     data: popularItems,
   });
 });
-
-// Export temp menu items for other controllers
-const getTempMenuItems = () => tempMenuItems;
 
 module.exports = {
   getMenuItems,
@@ -607,5 +241,4 @@ module.exports = {
   deleteMenuItem,
   addReview,
   getPopularItems,
-  getTempMenuItems,
 };
