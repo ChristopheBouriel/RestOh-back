@@ -21,6 +21,10 @@ const MenuItemSchema = new mongoose.Schema({
     type: String,
     default: null,
   },
+  cloudinaryPublicId: {
+    type: String,
+    default: null,
+  },
   category: {
     type: String,
     required: [true, 'Please add a category'],

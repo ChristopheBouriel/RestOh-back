@@ -1,7 +1,7 @@
 const MenuItem = require('../models/MenuItem');
 const asyncHandler = require('../utils/asyncHandler');
 const { menuSchema } = require('../utils/validation');
-const { getImageUrl, deleteUploadedFile } = require('../middleware/imageUpload');
+const { deleteImage } = require('../middleware/cloudinaryUpload');
 
 // Temporary in-memory menu items for testing
 let tempMenuItems = [
@@ -129,11 +129,9 @@ const getMenuItems = asyncHandler(async (req, res) => {
     }
 
     // Filter by availability
-    /*if (req.query.available !== undefined) {
+    if (req.query.available) {
       query.isAvailable = req.query.available === 'true';
-    } else {
-      query.isAvailable = true; // Default to available items only
-    }*/
+    }
 
     // Search functionality
     if (req.query.search) {
@@ -302,16 +300,19 @@ const createMenuItem = asyncHandler(async (req, res) => {
     }
   }
 
-  // Handle uploaded image
-  if (req.file) {
-    req.body.image = getImageUrl(req, req.file.filename);
+  // Handle uploaded image (Cloudinary middleware already sets req.body.image)
+  // Also set cloudinaryPublicId for new items
+  if (req.cloudinaryPublicId) {
+    req.body.cloudinaryPublicId = req.cloudinaryPublicId;
   }
 
   const { error } = menuSchema.validate(req.body);
   if (error) {
-    // Clean up uploaded file if validation fails
-    if (req.file) {
-      deleteUploadedFile(req.file.filename);
+    // Clean up Cloudinary image if validation fails
+    if (req.cloudinaryPublicId) {
+      deleteImage(req.cloudinaryPublicId).catch(err =>
+        console.log('Error deleting Cloudinary image:', err)
+      );
     }
     return res.status(400).json({
       success: false,
@@ -375,9 +376,11 @@ const updateMenuItem = asyncHandler(async (req, res) => {
     let menuItem = await MenuItem.findById(req.params.id);
 
     if (!menuItem) {
-      // Clean up uploaded file if item not found
-      if (req.file) {
-        deleteUploadedFile(req.file.filename);
+      // Clean up Cloudinary image if item not found
+      if (req.cloudinaryPublicId) {
+        deleteImage(req.cloudinaryPublicId).catch(err =>
+          console.log('Error deleting Cloudinary image:', err)
+        );
       }
       return res.status(404).json({
         success: false,
@@ -386,13 +389,12 @@ const updateMenuItem = asyncHandler(async (req, res) => {
     }
 
     // Handle uploaded image
-    let oldImageFilename = null;
+    let oldCloudinaryPublicId = null;
     if (req.file) {
-      // Extract old filename to delete it later
-      if (menuItem.image && menuItem.image.includes('/uploads/menu-items/')) {
-        oldImageFilename = menuItem.image.split('/').pop();
+      // Store old Cloudinary public ID to delete it later
+      if (menuItem.cloudinaryPublicId) {
+        oldCloudinaryPublicId = menuItem.cloudinaryPublicId;
       }
-      req.body.image = getImageUrl(req, req.file.filename);
     }
 
     const toUpdate = Object.keys(req.body);
@@ -427,9 +429,11 @@ const updateMenuItem = asyncHandler(async (req, res) => {
       runValidators: true,
     });
 
-    // Delete old image file if new image was uploaded
-    if (oldImageFilename) {
-      deleteUploadedFile(oldImageFilename);
+    // Delete old Cloudinary image if new image was uploaded
+    if (oldCloudinaryPublicId) {
+      deleteImage(oldCloudinaryPublicId).catch(err =>
+        console.log('Error deleting old Cloudinary image:', err)
+      );
     }
 
     res.status(200).json({
@@ -488,6 +492,13 @@ const deleteMenuItem = asyncHandler(async (req, res) => {
         success: false,
         message: 'Menu item not found',
       });
+    }
+
+    // Clean up Cloudinary image if it exists
+    if (menuItem.cloudinaryPublicId) {
+      deleteImage(menuItem.cloudinaryPublicId).catch(err =>
+        console.log('Error deleting Cloudinary image:', err)
+      );
     }
 
     await MenuItem.findByIdAndDelete(req.params.id);

@@ -35,6 +35,7 @@ const menuSchema = Joi.object({
     allergens: Joi.array().items(Joi.string()).optional(),
     spiceLevel: Joi.string().valid('mild', 'medium', 'hot', 'very-hot').allow(null).optional(),
     image: Joi.string().allow(null).optional(),
+    cloudinaryPublicId: Joi.string().allow(null).optional(),
   });
 
 // Reservation validation
