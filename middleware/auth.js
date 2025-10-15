@@ -8,13 +8,17 @@ const { getTempUsers } = require('../controllers/authController');
 const protect = async (req, res, next) => {
   let token;
 
-  // Check for token in headers
-  if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
+  // Check for token in cookies first (secure method)
+  if (req.cookies.token) {
+    token = req.cookies.token;
+  }
+  // Fallback to authorization header for backward compatibility
+  else if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
     token = req.headers.authorization.split(' ')[1];
   }
 
   // Make sure token exists
-  if (!token) {
+  if (!token || token === 'none') {
     return res.status(401).json({
       success: false,
       message: 'Not authorized to access this route',

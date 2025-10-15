@@ -2,6 +2,7 @@ const User = require('../models/User');
 const asyncHandler = require('../utils/asyncHandler');
 const { validateRegister, validateLogin } = require('../utils/validation');
 const fileStorage = require('../utils/fileStorage');
+const { sendTokenResponse, clearTokenCookie } = require('../utils/authCookies');
 
 // Temporary in-memory user store for testing when DB is not available
 let tempUsers = [{
@@ -71,20 +72,7 @@ const register = asyncHandler(async (req, res) => {
       phone,
     });
 
-    // Generate token
-    const token = user.getSignedJwtToken();
-
-    res.status(201).json({
-      success: true,
-      message: 'User registered successfully',
-      token,
-      user: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-      },
-    });
+    sendTokenResponse(user, 201, res, 'User registered successfully');
   } catch (dbError) {
     // Fallback to persistent file storage
     console.log('Database unavailable, using persistent file storage...');
@@ -129,24 +117,9 @@ const register = asyncHandler(async (req, res) => {
       // Also add to temp storage for backward compatibility
       tempUsers.push(newUser);
 
-      // Generate token
-      const token = jwt.sign({ id: newUser.id }, process.env.JWT_SECRET, {
-        expiresIn: process.env.JWT_EXPIRE,
-      });
-
       console.log(`✅ User registered successfully: ${email}`);
 
-      res.status(201).json({
-        success: true,
-        message: 'User registered successfully',
-        token,
-        user: {
-          id: newUser.id,
-          name: newUser.name,
-          email: newUser.email,
-          role: newUser.role,
-        },
-      });
+      sendTokenResponse(newUser, 201, res, 'User registered successfully');
     } catch (fileError) {
       console.error('File storage error:', fileError);
 
@@ -177,21 +150,7 @@ const register = asyncHandler(async (req, res) => {
 
       tempUsers.push(tempUser);
 
-      const token = jwt.sign({ id: tempUser.id }, process.env.JWT_SECRET, {
-        expiresIn: process.env.JWT_EXPIRE,
-      });
-
-      res.status(201).json({
-        success: true,
-        message: 'User registered successfully (temp storage)',
-        token,
-        user: {
-          id: tempUser.id,
-          name: tempUser.name,
-          email: tempUser.email,
-          role: tempUser.role,
-        },
-      });
+      sendTokenResponse(tempUser, 201, res, 'User registered successfully (temp storage)');
     }
   }
 });
@@ -235,21 +194,7 @@ const login = asyncHandler(async (req, res) => {
     // Update last login
     await user.updateLastLogin();
 
-    // Generate token
-    const token = user.getSignedJwtToken();
-
-    res.status(200).json({
-      success: true,
-      message: 'Login successful',
-      token,
-      user: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-        lastLogin: user.lastLogin,
-      },
-    });
+    sendTokenResponse(user, 200, res, 'Login successful');
   } catch (dbError) {
     // Fallback to persistent file storage
     console.log('Database unavailable, using persistent file storage for login...');
@@ -273,26 +218,14 @@ const login = asyncHandler(async (req, res) => {
         // Update last login in file storage
         const updatedUser = fileStorage.updateUser(fileUser.id, { lastLogin: new Date() });
 
-        // Generate token
-        const jwt = require('jsonwebtoken');
-        const token = jwt.sign({ id: fileUser.id }, process.env.JWT_SECRET, {
-          expiresIn: process.env.JWT_EXPIRE,
-        });
-
         console.log(`✅ User logged in successfully: ${email}`);
 
-        return res.status(200).json({
-          success: true,
-          message: 'Login successful',
-          token,
-          user: {
-            id: fileUser.id,
-            name: fileUser.name,
-            email: fileUser.email,
-            role: fileUser.role,
-            lastLogin: updatedUser?.lastLogin || new Date(),
-          },
-        });
+        const userWithLastLogin = {
+          ...fileUser,
+          lastLogin: updatedUser?.lastLogin || new Date()
+        };
+
+        return sendTokenResponse(userWithLastLogin, 200, res, 'Login successful');
       }
     } catch (fileError) {
       console.error('File storage error during login:', fileError);
@@ -323,24 +256,7 @@ const login = asyncHandler(async (req, res) => {
     // Update last login
     tempUser.lastLogin = new Date();
 
-    // Generate token
-    const jwt = require('jsonwebtoken');
-    const token = jwt.sign({ id: tempUser.id }, process.env.JWT_SECRET, {
-      expiresIn: process.env.JWT_EXPIRE,
-    });
-
-    res.status(200).json({
-      success: true,
-      message: 'Login successful (temp storage)',
-      token,
-      user: {
-        id: tempUser.id,
-        name: tempUser.name,
-        email: tempUser.email,
-        role: tempUser.role,
-        lastLogin: tempUser.lastLogin,
-      },
-    });
+    sendTokenResponse(tempUser, 200, res, 'Login successful (temp storage)');
   }
 });
 
@@ -449,6 +365,8 @@ const changePassword = asyncHandler(async (req, res) => {
 // @route   POST /api/auth/logout
 // @access  Private
 const logout = asyncHandler(async (req, res) => {
+  clearTokenCookie(res);
+
   res.status(200).json({
     success: true,
     message: 'Logged out successfully',

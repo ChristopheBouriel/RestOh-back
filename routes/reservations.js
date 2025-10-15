@@ -18,7 +18,7 @@ router.post('/', createReservation);
 router.get('/', getUserReservations);
 
 // Admin routes
-router.get('/admin/all', authorize('admin'), getAdminReservations);
+router.get('/admin', authorize('admin'), getAdminReservations);
 router.get('/admin/stats', authorize('admin'), getReservationStats);
 router.put('/admin/:id', authorize('admin'), updateAdminReservation);
 
