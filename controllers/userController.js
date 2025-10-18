@@ -1,6 +1,5 @@
 const User = require('../models/User');
 const asyncHandler = require('../utils/asyncHandler');
-const { getTempUsers } = require('./authController');
 
 // @desc    Get all users
 // @route   GET /api/users
@@ -84,14 +83,10 @@ const getUser = asyncHandler(async (req, res) => {
 // @route   PUT /api/users/:id
 // @access  Private/Admin
 const updateUser = asyncHandler(async (req, res) => {
+  console.log(req.body)
   const fieldsToUpdate = {
-    name: req.body.name,
-    email: req.body.email,
-    phone: req.body.phone,
     role: req.body.role,
     isActive: req.body.isActive,
-    address: req.body.address,
-    preferences: req.body.preferences,
   };
 
   // Remove undefined fields
@@ -190,115 +185,49 @@ const getUserStats = asyncHandler(async (req, res) => {
 // @route   GET /api/users/admin/all
 // @access  Private/Admin
 const getAdminUsers = asyncHandler(async (req, res) => {
-  try {
-    const page = parseInt(req.query.page, 10) || 1;
-    const limit = parseInt(req.query.limit, 10) || 10;
-    const role = req.query.role;
-    const isActive = req.query.isActive;
-    const search = req.query.search;
-    const sortBy = req.query.sortBy || 'createdAt';
-    const sortOrder = req.query.sortOrder === 'asc' ? 1 : -1;
+  const page = parseInt(req.query.page, 10) || 1;
+  const limit = parseInt(req.query.limit, 10) || 10;
+  const role = req.query.role;
+  const isActive = req.query.isActive;
+  const search = req.query.search;
+  const sortBy = req.query.sortBy || 'createdAt';
+  const sortOrder = req.query.sortOrder === 'asc' ? 1 : -1;
 
-    let query = {};
+  let query = {};
 
-    if (role) query.role = role;
-    if (isActive !== undefined) query.isActive = isActive === 'true';
-    if (search) {
-      query.$or = [
-        { name: { $regex: search, $options: 'i' } },
-        { email: { $regex: search, $options: 'i' } },
-        { phone: { $regex: search, $options: 'i' } },
-      ];
-    }
-
-    const startIndex = (page - 1) * limit;
-    const total = await User.countDocuments(query);
-    const users = await User.find(query)
-      .select('-password')
-      .sort({ [sortBy]: sortOrder })
-      .limit(limit)
-      .skip(startIndex);
-
-    const pagination = {};
-    if (startIndex + limit < total) {
-      pagination.next = { page: page + 1, limit };
-    }
-    if (startIndex > 0) {
-      pagination.prev = { page: page - 1, limit };
-    }
-
-    res.status(200).json({
-      success: true,
-      count: users.length,
-      total,
-      pagination,
-      data: users,
-    });
-  } catch (dbError) {
-    // Fallback to temp storage
-    console.log('Using temp storage for admin users...');
-
-    const tempUsers = getTempUsers();
-    let filteredUsers = [...tempUsers];
-
-    // Apply filters
-    if (req.query.role) {
-      filteredUsers = filteredUsers.filter(user => user.role === req.query.role);
-    }
-    if (req.query.isActive !== undefined) {
-      const isActiveFilter = req.query.isActive === 'true';
-      filteredUsers = filteredUsers.filter(user => user.isActive === isActiveFilter);
-    }
-    if (req.query.search) {
-      const searchTerm = req.query.search.toLowerCase();
-      filteredUsers = filteredUsers.filter(user =>
-        user.name.toLowerCase().includes(searchTerm) ||
-        user.email.toLowerCase().includes(searchTerm) ||
-        (user.phone && user.phone.includes(searchTerm))
-      );
-    }
-
-    // Sort
-    const sortBy = req.query.sortBy || 'createdAt';
-    const sortOrder = req.query.sortOrder === 'asc' ? 1 : -1;
-    filteredUsers.sort((a, b) => {
-      if (sortBy === 'createdAt') {
-        return sortOrder * (new Date(a.createdAt) - new Date(b.createdAt));
-      }
-      return sortOrder * a[sortBy].localeCompare(b[sortBy]);
-    });
-
-    // Remove passwords
-    filteredUsers = filteredUsers.map(user => {
-      const { password, ...userWithoutPassword } = user;
-      return userWithoutPassword;
-    });
-
-    // Pagination
-    const page = parseInt(req.query.page, 10) || 1;
-    const limit = parseInt(req.query.limit, 10) || 10;
-    const startIndex = (page - 1) * limit;
-    const endIndex = startIndex + limit;
-
-    const paginatedUsers = filteredUsers.slice(startIndex, endIndex);
-    const total = filteredUsers.length;
-
-    const pagination = {};
-    if (endIndex < total) {
-      pagination.next = { page: page + 1, limit };
-    }
-    if (startIndex > 0) {
-      pagination.prev = { page: page - 1, limit };
-    }
-
-    res.status(200).json({
-      success: true,
-      count: paginatedUsers.length,
-      total,
-      pagination,
-      data: paginatedUsers,
-    });
+  if (role) query.role = role;
+  if (isActive !== undefined) query.isActive = isActive === 'true';
+  if (search) {
+    query.$or = [
+      { name: { $regex: search, $options: 'i' } },
+      { email: { $regex: search, $options: 'i' } },
+      { phone: { $regex: search, $options: 'i' } },
+    ];
   }
+
+  const startIndex = (page - 1) * limit;
+  const total = await User.countDocuments(query);
+  const users = await User.find(query)
+    .select('-password')
+    .sort({ [sortBy]: sortOrder })
+    .limit(limit)
+    .skip(startIndex);
+
+  const pagination = {};
+  if (startIndex + limit < total) {
+    pagination.next = { page: page + 1, limit };
+  }
+  if (startIndex > 0) {
+    pagination.prev = { page: page - 1, limit };
+  }
+
+  res.status(200).json({
+    success: true,
+    count: users.length,
+    total,
+    pagination,
+    data: users,
+  });
 });
 
 module.exports = {

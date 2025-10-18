@@ -1,9 +1,6 @@
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 
-// Import temp users from authController
-const { getTempUsers } = require('../controllers/authController');
-
 // Protect routes - verify JWT token
 const protect = async (req, res, next) => {
   let token;
@@ -29,30 +26,14 @@ const protect = async (req, res, next) => {
     // Verify token
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-    try {
-      // Try to get user from MongoDB first
-      req.user = await User.findById(decoded.id).select('-password');
+    // Get user from MongoDB
+    req.user = await User.findById(decoded.id).select('-password');
 
-      if (!req.user) {
-        return res.status(401).json({
-          success: false,
-          message: 'User not found',
-        });
-      }
-    } catch (dbError) {
-      // Fallback to temp storage
-      const tempUsers = getTempUsers();
-      const tempUser = tempUsers.find(u => u.id === decoded.id);
-
-      if (!tempUser) {
-        return res.status(401).json({
-          success: false,
-          message: 'User not found',
-        });
-      }
-
-      const { password, ...userWithoutPassword } = tempUser;
-      req.user = userWithoutPassword;
+    if (!req.user) {
+      return res.status(401).json({
+        success: false,
+        message: 'User not found',
+      });
     }
 
     next();

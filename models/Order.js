@@ -87,13 +87,28 @@ const OrderSchema = new mongoose.Schema({
 });
 
 // Generate order number before saving
-OrderSchema.pre('save', function(next) {
-  if (!this.orderNumber) {
-    const timestamp = Date.now().toString();
-    const random = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
-    this.orderNumber = `ORD-${timestamp.slice(-6)}${random}`;
-  }
-  next();
+OrderSchema.pre('save', async function(next) {
+    try {
+      // Find the highest existing order number
+      const lastOrder = await this.constructor.findOne({
+        orderNumber: { $regex: /^ORD-\d{6}$/ }
+      }).sort({ orderNumber: -1 });
+
+      let nextNumber = 1;
+      if (lastOrder && lastOrder.orderNumber) {
+        // Extract number from ORD-XXXXXX format
+        const currentNumber = parseInt(lastOrder.orderNumber.replace('ORD-', ''));
+        nextNumber = currentNumber + 1;
+      }
+
+      this.orderNumber = `ORD-${nextNumber.toString().padStart(6, '0')}`;
+    } catch (error) {
+      // Fallback to timestamp-based generation if database query fails
+      const timestamp = Date.now().toString();
+      const random = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
+      this.orderNumber = `ORD-${timestamp.slice(-6)}${random}`;
+    }
+    next();
 });
 
 // Calculate estimated delivery time

@@ -59,12 +59,8 @@ const createOrder = asyncHandler(async (req, res) => {
     name: item.name,
   }));
 
-  // Generate order number
-  const orderNumber = `ORD${Date.now()}`;
-
   // Create order in MongoDB
   const order = await Order.create({
-    orderNumber,
     userId: req.user.id,
     userEmail: req.user.email,
     userName: req.user.name,

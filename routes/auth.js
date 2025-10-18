@@ -3,7 +3,7 @@ const {
   register,
   login,
   getMe,
-  updateProfile,
+  updateProfileUser,
   changePassword,
   logout,
 } = require('../controllers/authController');
@@ -19,7 +19,7 @@ router.post('/login', login);
 router.use(protect); // All routes after this middleware are protected
 
 router.get('/me', getMe);
-router.put('/profile', updateProfile);
+router.put('/profile', updateProfileUser);
 router.put('/change-password', changePassword);
 router.post('/logout', logout);
 
