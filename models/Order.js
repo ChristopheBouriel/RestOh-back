@@ -2,16 +2,17 @@ const mongoose = require('mongoose');
 
 const OrderSchema = new mongoose.Schema({
   userId: {
-    type: String,
-    required: [true, 'Order must belong to a user'],
-  },
+      type: mongoose.Schema.ObjectId,
+      ref: 'User',
+      required: [true, 'Order must belong to a user'],
+    },
   userEmail: {
     type: String,
-    required: [true, 'Please enter email'],
+    required: [true, 'User must have an email'],
   },
   userName: {
     type: String,
-    required: [true, 'Please enter user name'],
+    required: [true, 'User must have a name'],
   },
   orderNumber: {
     type: String,

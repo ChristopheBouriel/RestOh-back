@@ -13,7 +13,7 @@ let tempReservations = [
       phone: '9876543210',
     },
     date: new Date('2024-01-20T19:00:00Z'),
-    time: '19:00',
+    slot: 5,
     guests: 4,
     status: 'confirmed',
     specialRequests: 'Window seat preferred',
@@ -38,30 +38,23 @@ const createReservation = asyncHandler(async (req, res) => {
     });
   }
 
-  const { date, time, guests, specialRequest, occasion, contactPhone, contactEmail, preferences } = req.body;
+  const { date, slot, guests, tableNumber, specialRequest, contactPhone } = req.body;
 
+ 
   // Create reservation object
   const reservationData = {
-    user: req.user.id,
+    userId: req.user._id,
+    userEmail: req.user.email,
+    userName: req.user.name,
     date,
-    time,
+    slot,
     guests,
+    tableNumber,
     specialRequest,
-    occasion,
     contactPhone,
-    contactEmail: contactEmail || req.user.email,
-    preferences,
   };
 
   const reservation = new Reservation(reservationData);
-
-  // Validate time is within restaurant hours
-  if (!reservation.isValidTime()) {
-    return res.status(400).json({
-      success: false,
-      message: 'Reservation time must be between 11:00 AM and 11:00 PM',
-    });
-  }
 
   try {
     await reservation.save();
@@ -73,16 +66,13 @@ const createReservation = asyncHandler(async (req, res) => {
     // Also add to temp storage for admin demo
     const tempReservation = {
       _id: String(tempReservationId++),
-      user: {
-        _id: req.user.id,
-        name: req.user.name,
-        email: req.user.email,
-        phone: req.user.phone,
-      },
+      userId: req.user._id,
+      userEmail: req.user.email,
+      userName: req.user.name,
       date: new Date(date),
-      time,
+      slot,
       guests,
-      status: 'pending',
+      status: 'confirmed',
       specialRequests: specialRequest || null,
       tableNumber: null,
       createdAt: new Date(),
@@ -109,7 +99,7 @@ const createReservation = asyncHandler(async (req, res) => {
         phone: req.user.phone,
       },
       date: new Date(date),
-      time,
+      slot,
       guests,
       status: 'pending',
       specialRequests: specialRequest || null,
@@ -153,7 +143,7 @@ const getUserReservations = asyncHandler(async (req, res) => {
   const total = await Reservation.countDocuments(query);
   const reservations = await Reservation.find(query)
     .populate('user', 'name email phone')
-    .sort({ date: -1, time: -1 })
+    .sort({ date: -1, slot: -1 })
     .limit(limit)
     .skip(startIndex);
 
@@ -214,7 +204,7 @@ const getAdminReservations = asyncHandler(async (req, res) => {
     const total = await Reservation.countDocuments(query);
     const reservations = await Reservation.find(query)
       .populate('user', 'name email phone')
-      .sort({ date: 1, time: 1 })
+      .sort({ date: 1, slot: 1 })
       .limit(limit)
       .skip(startIndex);
 
@@ -286,7 +276,7 @@ const getAdminReservations = asyncHandler(async (req, res) => {
 const updateAdminReservation = asyncHandler(async (req, res) => {
   const { status, tableNumber, specialRequests } = req.body;
 
-  const validStatuses = ['pending', 'confirmed', 'seated', 'completed', 'cancelled', 'no_show'];
+  const validStatuses = ['confirmed', 'seated', 'completed', 'cancelled', 'no-show'];
 
   if (status && !validStatuses.includes(status)) {
     return res.status(400).json({
@@ -354,7 +344,7 @@ const updateAdminReservation = asyncHandler(async (req, res) => {
 const getReservationStats = asyncHandler(async (req, res) => {
   try {
     const totalReservations = await Reservation.countDocuments();
-    const pendingReservations = await Reservation.countDocuments({ status: 'pending' });
+    const noShowReservations = await Reservation.countDocuments({ status: 'no-show' });
     const confirmedReservations = await Reservation.countDocuments({ status: 'confirmed' });
     const seatedReservations = await Reservation.countDocuments({ status: 'seated' });
     const completedReservations = await Reservation.countDocuments({ status: 'completed' });
@@ -364,7 +354,7 @@ const getReservationStats = asyncHandler(async (req, res) => {
       success: true,
       data: {
         totalReservations,
-        pendingReservations,
+        noShowReservations,
         confirmedReservations,
         seatedReservations,
         completedReservations,
@@ -381,7 +371,7 @@ const getReservationStats = asyncHandler(async (req, res) => {
   } catch (dbError) {
     // Fallback stats for temp storage
     const totalReservations = tempReservations.length;
-    const pendingReservations = tempReservations.filter(r => r.status === 'pending').length;
+    const noShowReservations = tempReservations.filter(r => r.status === 'no-show').length;
     const confirmedReservations = tempReservations.filter(r => r.status === 'confirmed').length;
     const seatedReservations = tempReservations.filter(r => r.status === 'seated').length;
     const completedReservations = tempReservations.filter(r => r.status === 'completed').length;

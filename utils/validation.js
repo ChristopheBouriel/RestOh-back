@@ -42,17 +42,11 @@ const menuSchema = Joi.object({
 const validateReservation = (data) => {
   const schema = Joi.object({
     date: Joi.date().min('now').required(),
-    time: Joi.string().pattern(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/).required(),
+    slot: Joi.number().required(),
     guests: Joi.number().integer().min(1).max(20).required(),
+    tableNumber: Joi.array().items(Joi.number().integer()).required(),
     specialRequest: Joi.string().max(200).allow(null).optional(),
-    occasion: Joi.string().valid('birthday', 'anniversary', 'date', 'business', 'family', 'celebration', 'other').allow(null).optional(),
     contactPhone: Joi.string().pattern(/^[0-9]{10}$/).required(),
-    contactEmail: Joi.string().email().required(),
-    preferences: Joi.object({
-      seating: Joi.string().valid('indoor', 'outdoor', 'window', 'private', 'no-preference').optional(),
-      accessibility: Joi.boolean().optional(),
-      highChair: Joi.boolean().optional(),
-    }).optional(),
   });
 
   return schema.validate(data);
