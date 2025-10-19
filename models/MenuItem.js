@@ -56,7 +56,6 @@ const MenuItemSchema = new mongoose.Schema({
   allergens: [{
     type: String,
     trim: true,
-
   }],
   preparationTime: {
     type: Number, // in minutes

@@ -105,37 +105,69 @@ const createMenuItem = asyncHandler(async (req, res) => {
 // @route   PUT /api/menu/:id
 // @access  Private/Admin
 const updateMenuItem = asyncHandler(async (req, res) => {
-  if (Object.keys(req.body).length > 0) {
-    const { error } = menuSchema.validate(req.body, { allowUnknown: true });
-    if (error) {
+  const toUpdate = Object.keys(req.body);
+    if(toUpdate.length < 1 && !req.file) {
       return res.status(400).json({
         success: false,
-        message: `Validation error: ${error.details[0].message}`,
+        message: 'Nothing to modify',
       });
     }
-  }
 
-  const menuItem = await MenuItem.findByIdAndUpdate(
-    req.params.id,
-    req.body,
-    {
+    // Get existing menu item first to check for old image
+    const existingMenuItem = await MenuItem.findById(req.params.id);
+    if (!existingMenuItem) {
+      return res.status(404).json({
+        success: false,
+        message: 'Menu item not found',
+      });
+    }
+
+    // If new image is provided, delete the old one from Cloudinary
+    if (req.file && existingMenuItem.cloudinaryPublicId) {
+      try {
+        await deleteImage(existingMenuItem.cloudinaryPublicId);
+        console.log('✅ Old image deleted from Cloudinary');
+      } catch (error) {
+        console.log('Error deleting old image from Cloudinary:', error);
+      }
+    }
+
+    //TODO : in case of update of the item description, verify that there is difference (could be inserted in the loop)
+
+    const newValues = Object.values(req.body);
+    const errors = [];
+    for(let i = 0; i < toUpdate.length; i++) {
+      const { error } = menuSchema.extract(toUpdate[i]).validate(newValues[i]);
+      if (error) {
+        errors.push(error.details[0].message);
+      }
+
+    }
+
+    if(errors.length) {
+      return res.status(400).json({
+          success: false,
+          message: errors,
+        });
+    }
+
+    menuItem = await MenuItem.findByIdAndUpdate(req.params.id, { $set: req.body }, {
       new: true,
       runValidators: true,
-    }
-  );
+    });
 
-  if (!menuItem) {
+    if (!menuItem) {
     return res.status(404).json({
       success: false,
       message: 'Menu item not found',
     });
   }
 
-  res.status(200).json({
-    success: true,
-    message: 'Menu item updated successfully',
-    data: menuItem,
-  });
+    res.status(200).json({
+      success: true,
+      message: 'Menu item updated successfully',
+      data: menuItem,
+    });
 });
 
 // @desc    Delete menu item
