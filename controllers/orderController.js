@@ -58,6 +58,7 @@ const createOrder = asyncHandler(async (req, res) => {
     quantity: item.quantity,
     price: item.price,
     name: item.name,
+    image: item.image
   }));
 
   // Create order in MongoDB

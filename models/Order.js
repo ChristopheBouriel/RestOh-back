@@ -24,6 +24,10 @@ const OrderSchema = new mongoose.Schema({
       ref: 'MenuItem',
       required: [true, 'Please add a menu item'],
     },
+    name: {
+      type: String,
+      required: [true, 'Please add name'],
+    },
     quantity: {
       type: Number,
       required: [true, 'Please add quantity'],
@@ -32,6 +36,10 @@ const OrderSchema = new mongoose.Schema({
     price: {
       type: Number,
       required: [true, 'Please add item price'],
+    },
+    image: {
+      type: String,
+      required: [true, 'Please add image URL']
     },
     specialInstructions: {
       type: String,
@@ -74,7 +82,6 @@ const OrderSchema = new mongoose.Schema({
   },
   deliveryAddress: {
     type: String,
-    required: [true, 'Please enter the delivery address'],
     default: null,
   },
   notes: {
