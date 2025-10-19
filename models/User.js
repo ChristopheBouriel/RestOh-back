@@ -53,6 +53,18 @@ const UserSchema = new mongoose.Schema({
       default: null,
     },
   },
+  totalOrders: {
+    type: Number,
+    default: 0,
+  },
+  totalReservations: {
+    type: Number,
+    default: 0,
+  },
+  totalSpent: {
+    type: Number,
+    default: 0,
+  },
   isActive: {
     type: Boolean,
     default: true,

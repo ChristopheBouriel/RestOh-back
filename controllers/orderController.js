@@ -1,5 +1,6 @@
 const Order = require('../models/Order');
 const MenuItem = require('../models/MenuItem');
+const User = require('../models/User');
 const asyncHandler = require('../utils/asyncHandler');
 
 // @desc    Create new order
@@ -76,6 +77,21 @@ const createOrder = asyncHandler(async (req, res) => {
   });
 
   console.log('Order created in MongoDB:', order._id);
+
+  // Update user statistics if payment is already paid
+  if (paymentStatus === 'paid') {
+    try {
+      await User.findByIdAndUpdate(req.user.id, {
+        $inc: {
+          totalOrders: 1,
+          totalSpent: calculatedTotal,
+        },
+      });
+      console.log('User statistics updated for paid order');
+    } catch (error) {
+      console.error('Error updating user statistics:', error);
+    }
+  }
 
   res.status(201).json({
     success: true,
@@ -198,6 +214,21 @@ const updateOrderStatus = asyncHandler(async (req, res) => {
   }
 
   console.log(`✅ Order status updated successfully in MongoDB: ${order._id}`);
+
+  // Update user statistics if order is delivered and payment wasn't already paid
+  if (status === 'delivered' && order.paymentStatus !== 'paid') {
+    try {
+      await User.findByIdAndUpdate(order.userId, {
+        $inc: {
+          totalOrders: 1,
+          totalSpent: order.totalPrice,
+        },
+      });
+      console.log('User statistics updated for delivered order');
+    } catch (error) {
+      console.error('Error updating user statistics:', error);
+    }
+  }
 
   res.status(200).json({
     success: true,
