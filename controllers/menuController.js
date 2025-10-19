@@ -147,11 +147,11 @@ const updateMenuItem = asyncHandler(async (req, res) => {
     if(errors.length) {
       return res.status(400).json({
           success: false,
-          message: errors,
+          message: `Validation error: ${errors.join(', ')}`,
         });
     }
 
-    menuItem = await MenuItem.findByIdAndUpdate(req.params.id, { $set: req.body }, {
+    const menuItem = await MenuItem.findByIdAndUpdate(req.params.id, { $set: req.body }, {
       new: true,
       runValidators: true,
     });
@@ -222,7 +222,7 @@ const addReview = asyncHandler(async (req, res) => {
   }
 
   const existingReview = menuItem.reviews.find(
-    (review) => review.user.toString() === req.user.id
+    (review) => review.user.toString() === req.user._id.toString()
   );
 
   if (existingReview) {
@@ -233,7 +233,7 @@ const addReview = asyncHandler(async (req, res) => {
   }
 
   const newReview = {
-    user: req.user.id,
+    user: req.user._id,
     rating,
     comment,
   };

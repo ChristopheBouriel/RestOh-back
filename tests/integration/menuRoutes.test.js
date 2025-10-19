@@ -14,6 +14,11 @@ jest.mock('../../middleware/auth', () => ({
   authorize: jest.fn(() => (req, res, next) => next()),
 }));
 
+jest.mock('../../middleware/cloudinaryUpload', () => ({
+  uploadMenuImage: jest.fn((req, res, next) => next()),
+  deleteImage: jest.fn().mockResolvedValue({ result: 'ok' }),
+}));
+
 const app = express();
 app.use(express.json());
 app.use('/api/menu', menuRoutes);
@@ -140,7 +145,7 @@ describe('Menu Routes Integration Tests', () => {
   describe('POST /api/menu', () => {
     beforeEach(() => {
       protect.mockImplementation((req, res, next) => {
-        req.user = { id: 'admin-id', role: 'admin' };
+        req.user = { _id: 'admin-id', role: 'admin' };
         next();
       });
       authorize.mockImplementation(() => (req, res, next) => next());
@@ -177,7 +182,7 @@ describe('Menu Routes Integration Tests', () => {
         .expect(400);
 
       expect(res.body.success).toBe(false);
-      expect(res.body.message).toContain('validation');
+      expect(res.body.message).toContain('Validation error');
     });
 
     it('should handle image upload', async () => {
@@ -202,7 +207,7 @@ describe('Menu Routes Integration Tests', () => {
   describe('PUT /api/menu/:id', () => {
     beforeEach(() => {
       protect.mockImplementation((req, res, next) => {
-        req.user = { id: 'admin-id', role: 'admin' };
+        req.user = { _id: 'admin-id', role: 'admin' };
         next();
       });
       authorize.mockImplementation(() => (req, res, next) => next());
@@ -245,14 +250,14 @@ describe('Menu Routes Integration Tests', () => {
         .expect(400);
 
       expect(res.body.success).toBe(false);
-      expect(res.body.message).toContain('validation');
+      expect(res.body.message).toContain('Validation error');
     });
   });
 
   describe('DELETE /api/menu/:id', () => {
     beforeEach(() => {
       protect.mockImplementation((req, res, next) => {
-        req.user = { id: 'admin-id', role: 'admin' };
+        req.user = { _id: 'admin-id', role: 'admin' };
         next();
       });
       authorize.mockImplementation(() => (req, res, next) => next());
@@ -282,7 +287,7 @@ describe('Menu Routes Integration Tests', () => {
   describe('POST /api/menu/:id/review', () => {
     beforeEach(() => {
       protect.mockImplementation((req, res, next) => {
-        req.user = { id: 'user-id', name: 'Test User' };
+        req.user = { _id: 'user-id', name: 'Test User' };
         next();
       });
     });

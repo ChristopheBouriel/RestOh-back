@@ -165,7 +165,7 @@ describe('Menu Controller', () => {
   describe('createMenuItem', () => {
     it('should create a new menu item successfully', async () => {
       const admin = await createTestAdmin();
-      req.user = { id: admin._id, role: 'admin' };
+      req.user = { _id: admin._id, role: 'admin' };
       req.body = {
         name: 'New Dish',
         description: 'A delicious new dish',
@@ -190,7 +190,7 @@ describe('Menu Controller', () => {
 
     it('should return 400 for validation errors', async () => {
       const admin = await createTestAdmin();
-      req.user = { id: admin._id, role: 'admin' };
+      req.user = { _id: admin._id, role: 'admin' };
       req.body = {
         name: '',
         description: 'A dish without name',
@@ -210,7 +210,7 @@ describe('Menu Controller', () => {
 
     it('should handle image upload correctly', async () => {
       const admin = await createTestAdmin();
-      req.user = { id: admin._id, role: 'admin' };
+      req.user = { _id: admin._id, role: 'admin' };
       req.body = {
         name: 'Dish with Image',
         description: 'A dish with uploaded image',
@@ -238,7 +238,7 @@ describe('Menu Controller', () => {
       const admin = await createTestAdmin();
       const menuItem = await createTestMenuItem({ name: 'Original Name' });
 
-      req.user = { id: admin._id, role: 'admin' };
+      req.user = { _id: admin._id, role: 'admin' };
       req.params = { id: menuItem._id.toString() };
       req.body = { name: 'Updated Name', price: 30 };
 
@@ -257,7 +257,7 @@ describe('Menu Controller', () => {
 
     it('should return 404 if menu item not found', async () => {
       const admin = await createTestAdmin();
-      req.user = { id: admin._id, role: 'admin' };
+      req.user = { _id: admin._id, role: 'admin' };
       req.params = { id: '507f1f77bcf86cd799439011' };
       req.body = { name: 'Updated Name' };
 
@@ -274,7 +274,7 @@ describe('Menu Controller', () => {
       const admin = await createTestAdmin();
       const menuItem = await createTestMenuItem();
 
-      req.user = { id: admin._id, role: 'admin' };
+      req.user = { _id: admin._id, role: 'admin' };
       req.params = { id: menuItem._id.toString() };
       req.body = { price: -10 };
 
@@ -295,7 +295,7 @@ describe('Menu Controller', () => {
       const admin = await createTestAdmin();
       const menuItem = await createTestMenuItem();
 
-      req.user = { id: admin._id, role: 'admin' };
+      req.user = { _id: admin._id, role: 'admin' };
       req.params = { id: menuItem._id.toString() };
 
       await deleteMenuItem(req, res);
@@ -312,7 +312,7 @@ describe('Menu Controller', () => {
 
     it('should return 404 if menu item not found', async () => {
       const admin = await createTestAdmin();
-      req.user = { id: admin._id, role: 'admin' };
+      req.user = { _id: admin._id, role: 'admin' };
       req.params = { id: '507f1f77bcf86cd799439011' };
 
       await deleteMenuItem(req, res);
@@ -330,7 +330,7 @@ describe('Menu Controller', () => {
       const user = await createTestUser();
       const menuItem = await createTestMenuItem();
 
-      req.user = { id: user._id, name: user.name };
+      req.user = { _id: user._id, name: user.name };
       req.params = { id: menuItem._id.toString() };
       req.body = { rating: 5, comment: 'Excellent dish!' };
 
@@ -355,7 +355,7 @@ describe('Menu Controller', () => {
         reviews: [{ user: user._id, rating: 4, comment: 'Good' }],
       });
 
-      req.user = { id: user._id, name: user.name };
+      req.user = { _id: user._id, name: user.name };
       req.params = { id: menuItem._id.toString() };
       req.body = { rating: 5, comment: 'Updated review' };
 
@@ -372,7 +372,7 @@ describe('Menu Controller', () => {
       const user = await createTestUser();
       const menuItem = await createTestMenuItem();
 
-      req.user = { id: user._id, name: user.name };
+      req.user = { _id: user._id, name: user.name };
       req.params = { id: menuItem._id.toString() };
       req.body = { rating: 6, comment: 'Invalid rating' };
 
@@ -387,7 +387,7 @@ describe('Menu Controller', () => {
 
     it('should return 404 if menu item not found', async () => {
       const user = await createTestUser();
-      req.user = { id: user._id, name: user.name };
+      req.user = { _id: user._id, name: user.name };
       req.params = { id: '507f1f77bcf86cd799439011' };
       req.body = { rating: 5, comment: 'Great!' };
 

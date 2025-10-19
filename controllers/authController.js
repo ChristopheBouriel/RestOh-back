@@ -83,7 +83,7 @@ const login = asyncHandler(async (req, res) => {
 // @route   GET /api/auth/me
 // @access  Private
 const getMe = asyncHandler(async (req, res) => {
-  const user = await User.findById(req.user.id);
+  const user = await User.findById(req.user._id);
 
   if (!user) {
     return res.status(404).json({
@@ -102,27 +102,48 @@ const getMe = asyncHandler(async (req, res) => {
 // @route   PUT /api/auth/profile
 // @access  Private
 const updateProfileUser = asyncHandler(async (req, res) => {
-  const fieldsToUpdate = {
-    name: req.body.name,
-    phone: req.body.phone || null,
-    address: {
-      street: req.body.street || null,
-      city: req.body.city || null,
-      zipCode: req.body.zipCode || null,
-      state: req.body.state || null,
-    },
-    email: req.body.email,
-    preferences: req.body.preferences,
-  };
+  console.log('updateProfileUser called with body:', req.body);
+  console.log('User ID:', req.user._id);
 
-  // Remove undefined fields
-  Object.keys(fieldsToUpdate).forEach(key => {
-    if (fieldsToUpdate[key] === undefined) {
-      delete fieldsToUpdate[key];
-    }
-  });
+  const fieldsToUpdate = {};
 
-  const user = await User.findByIdAndUpdate(req.user.id, fieldsToUpdate, {
+  // Only add fields that are provided and not undefined
+  if (req.body.name !== undefined) {
+    fieldsToUpdate.name = req.body.name;
+  }
+  if (req.body.phone !== undefined) {
+    fieldsToUpdate.phone = req.body.phone;
+  }
+  if (req.body.email !== undefined) {
+    fieldsToUpdate.email = req.body.email;
+  }
+  if (req.body.preferences !== undefined) {
+    fieldsToUpdate.preferences = req.body.preferences;
+  }
+
+  // Handle address separately
+  const addressFields = ['street', 'city', 'zipCode', 'state'];
+  const hasAddressFields = addressFields.some(field => req.body[field] !== undefined);
+
+  if (hasAddressFields) {
+    fieldsToUpdate.address = {};
+    addressFields.forEach(field => {
+      if (req.body[field] !== undefined) {
+        fieldsToUpdate.address[field] = req.body[field];
+      }
+    });
+  }
+
+  console.log('Fields to update:', fieldsToUpdate);
+
+  if (Object.keys(fieldsToUpdate).length === 0) {
+    return res.status(400).json({
+      success: false,
+      message: 'No fields to update',
+    });
+  }
+
+  const user = await User.findByIdAndUpdate(req.user._id, fieldsToUpdate, {
     new: true,
     runValidators: true,
   });
@@ -133,6 +154,8 @@ const updateProfileUser = asyncHandler(async (req, res) => {
       message: 'User not found',
     });
   }
+
+  console.log('User updated successfully:', user._id);
 
   res.status(200).json({
     success: true,
@@ -162,7 +185,7 @@ const changePassword = asyncHandler(async (req, res) => {
   }
 
   // Get user with password
-  const user = await User.findById(req.user.id).select('+password');
+  const user = await User.findById(req.user._id).select('+password');
 
   if (!user) {
     return res.status(404).json({

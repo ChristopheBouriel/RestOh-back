@@ -19,7 +19,7 @@ router.get('/popular', getPopularItems);
 router.get('/:id', getMenuItem);
 
 // Protected routes
-router.post('/:id/reviews', protect, addReview);
+router.post('/:id/review', protect, addReview);
 
 // Admin only routes
 router.post('/', protect, authorize('admin'), uploadMenuImage, createMenuItem);

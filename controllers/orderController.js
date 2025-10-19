@@ -63,7 +63,7 @@ const createOrder = asyncHandler(async (req, res) => {
 
   // Create order in MongoDB
   const order = await Order.create({
-    userId: req.user.id,
+    userId: req.user._id,
     userEmail: req.user.email,
     userName: req.user.name,
     items: orderItems,
@@ -82,7 +82,7 @@ const createOrder = asyncHandler(async (req, res) => {
   // Update user statistics if payment is already paid
   if (paymentStatus === 'paid') {
     try {
-      await User.findByIdAndUpdate(req.user.id, {
+      await User.findByIdAndUpdate(req.user._id, {
         $inc: {
           totalOrders: 1,
           totalSpent: calculatedTotal,
@@ -111,7 +111,7 @@ const getUserOrders = asyncHandler(async (req, res) => {
   const limit = parseInt(req.query.limit, 10) || 10;
   const startIndex = (page - 1) * limit;
 
-  let query = { userId: req.user.id };
+  let query = { userId: req.user._id };
 
   // Filter by status
   if (req.query.status) {
@@ -164,7 +164,7 @@ const getOrder = asyncHandler(async (req, res) => {
   }
 
   // Make sure user owns order or is admin
-  if (order.userId.toString() !== req.user.id && req.user.role !== 'admin') {
+  if (order.userId.toString() !== req.user._id.toString() && req.user.role !== 'admin') {
     return res.status(403).json({
       success: false,
       message: 'Not authorized to access this order',
@@ -251,7 +251,7 @@ const cancelOrder = asyncHandler(async (req, res) => {
     });
   }
 
-  if (order.userId.toString() !== req.user.id) {
+  if (order.userId.toString() !== req.user._id.toString()) {
     return res.status(403).json({
       success: false,
       message: 'Not authorized to cancel this order',
@@ -289,7 +289,7 @@ const deleteOrder = asyncHandler(async (req, res) => {
     });
   }
 
-  if (order.userId.toString() !== req.user.id) {
+  if (order.userId.toString() !== req.user._id.toString()) {
     return res.status(403).json({
       success: false,
       message: 'Not authorized to delete this order',

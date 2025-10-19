@@ -64,21 +64,28 @@ const mockResponse = () => {
   const res = {
     statusCode: 200,
     headers: {},
+    data: null,
   };
+
   res.status = jest.fn((code) => {
     res.statusCode = code;
-    return res;
+    return res; // Critical: must return res for chaining
   });
+
   res.json = jest.fn((data) => {
     res.data = data;
     return res;
   });
+
   res.send = jest.fn((data) => {
     res.data = data;
     return res;
   });
+
   res.set = jest.fn(() => res);
   res.cookie = jest.fn(() => res);
+  res.clearCookie = jest.fn(() => res);
+
   return res;
 };
 

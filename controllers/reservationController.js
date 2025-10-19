@@ -1,4 +1,5 @@
 const Reservation = require('../models/Reservation');
+const User = require('../models/User');
 const asyncHandler = require('../utils/asyncHandler');
 const { validateReservation } = require('../utils/validation');
 
@@ -33,9 +34,21 @@ const createReservation = asyncHandler(async (req, res) => {
   const reservation = new Reservation(reservationData);
   await reservation.save();
 
+  // Update user statistics
+  try {
+    await User.findByIdAndUpdate(req.user._id, {
+      $inc: {
+        totalReservations: 1,
+      },
+    });
+    console.log('User statistics updated for new reservation');
+  } catch (error) {
+    console.error('Error updating user statistics:', error);
+  }
+
   // Populate user details
   const populatedReservation = await Reservation.findById(reservation._id)
-    .populate('user', 'name email phone');
+    .populate('userId', 'name email phone');
 
   res.status(201).json({
     success: true,
@@ -52,7 +65,7 @@ const getUserReservations = asyncHandler(async (req, res) => {
   const limit = parseInt(req.query.limit, 10) || 10;
   const startIndex = (page - 1) * limit;
 
-  let query = { userId: req.user.id };
+  let query = { userId: req.user._id };
 
   // Filter by status
   if (req.query.status) {
