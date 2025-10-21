@@ -258,10 +258,26 @@ const cancelOrder = asyncHandler(async (req, res) => {
     });
   }
 
+  // Check if order can be cancelled
   if (order.status === 'delivered' || order.status === 'cancelled') {
     return res.status(400).json({
       success: false,
       message: 'Cannot cancel order that is already delivered or cancelled',
+    });
+  }
+
+  // Only allow cancellation if payment is not 'paid' and status is 'pending' or 'confirmed'
+  if (order.paymentStatus === 'paid') {
+    return res.status(400).json({
+      success: false,
+      message: 'Cannot cancel paid orders. Please contact customer service for refunds.',
+    });
+  }
+
+  if (order.status !== 'pending' && order.status !== 'confirmed') {
+    return res.status(400).json({
+      success: false,
+      message: 'Order can only be cancelled when status is pending or confirmed',
     });
   }
 
