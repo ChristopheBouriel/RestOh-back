@@ -4,6 +4,8 @@ const {
   getUserReservations,
   getAdminReservations,
   updateAdminReservation,
+  updateUserReservation,
+  cancelUserReservation,
   getReservationStats,
 } = require('../controllers/reservationController');
 const { protect, authorize } = require('../middleware/auth');
@@ -16,6 +18,8 @@ router.use(protect);
 // User routes
 router.post('/', createReservation);
 router.get('/', getUserReservations);
+router.put('/:id', updateUserReservation);
+router.delete('/:id', cancelUserReservation);
 
 // Admin routes
 router.get('/admin', authorize('admin'), getAdminReservations);

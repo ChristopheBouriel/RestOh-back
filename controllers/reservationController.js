@@ -2,6 +2,11 @@ const Reservation = require('../models/Reservation');
 const User = require('../models/User');
 const asyncHandler = require('../utils/asyncHandler');
 const { validateReservation } = require('../utils/validation');
+const { isValidSlot } = require('../utils/timeSlots');
+const {
+  validateReservationUpdate,
+  canCancelReservation
+} = require('../utils/reservationHelpers');
 
 // @desc    Create new reservation
 // @route   POST /api/reservations
@@ -235,10 +240,149 @@ const getReservationStats = asyncHandler(async (req, res) => {
   });
 });
 
+// @desc    Update user's own reservation
+// @route   PUT /api/reservations/:id
+// @access  Private
+const updateUserReservation = asyncHandler(async (req, res) => {
+  const reservation = await Reservation.findById(req.params.id);
+
+  if (!reservation) {
+    return res.status(404).json({
+      success: false,
+      message: 'Reservation not found',
+    });
+  }
+
+  if (reservation.userId.toString() !== req.user._id.toString()) {
+    return res.status(403).json({
+      success: false,
+      message: 'Not authorized to update this reservation',
+    });
+  }
+
+  // Check if reservation can be updated (only confirmed reservations)
+  if (reservation.status !== 'confirmed') {
+    return res.status(400).json({
+      success: false,
+      message: 'Only confirmed reservations can be updated',
+    });
+  }
+
+  // Validate slot number if provided
+  const { date, slot } = req.body;
+  if (slot && !isValidSlot(slot)) {
+    return res.status(400).json({
+      success: false,
+      message: 'Invalid slot number',
+    });
+  }
+
+  // Use helper to validate time constraints
+  const validation = validateReservationUpdate(reservation, { date, slot });
+  if (!validation.isValid) {
+    return res.status(400).json({
+      success: false,
+      message: validation.errors[0], // Return first error
+    });
+  }
+
+  const { guests, specialRequest, contactPhone } = req.body;
+
+  // Validate input if provided
+  const updateData = {};
+  if (date) updateData.date = date;
+  if (slot) updateData.slot = slot;
+  if (guests) updateData.guests = guests;
+  if (specialRequest !== undefined) updateData.specialRequest = specialRequest;
+  if (contactPhone) updateData.contactPhone = contactPhone;
+  updateData.updatedAt = new Date();
+
+  const updatedReservation = await Reservation.findByIdAndUpdate(
+    req.params.id,
+    updateData,
+    { new: true, runValidators: true }
+  ).populate('userId', 'name email phone');
+
+  res.status(200).json({
+    success: true,
+    message: 'Reservation updated successfully',
+    data: updatedReservation,
+  });
+});
+
+// @desc    Cancel user's own reservation
+// @route   DELETE /api/reservations/:id
+// @access  Private
+const cancelUserReservation = asyncHandler(async (req, res) => {
+  const reservation = await Reservation.findById(req.params.id);
+
+  if (!reservation) {
+    return res.status(404).json({
+      success: false,
+      message: 'Reservation not found',
+    });
+  }
+
+  if (reservation.userId.toString() !== req.user._id.toString()) {
+    return res.status(403).json({
+      success: false,
+      message: 'Not authorized to cancel this reservation',
+    });
+  }
+
+  // Check if reservation can be cancelled
+  if (reservation.status === 'cancelled' || reservation.status === 'completed') {
+    return res.status(400).json({
+      success: false,
+      message: 'Reservation is already cancelled or completed',
+    });
+  }
+
+  if (reservation.status !== 'confirmed') {
+    return res.status(400).json({
+      success: false,
+      message: 'Only confirmed reservations can be cancelled',
+    });
+  }
+
+  // Use helper to validate cancellation time constraints
+  const cancellationCheck = canCancelReservation(reservation.date, reservation.slot);
+  if (!cancellationCheck.canCancel) {
+    return res.status(400).json({
+      success: false,
+      message: cancellationCheck.message,
+    });
+  }
+
+  reservation.status = 'cancelled';
+  reservation.updatedAt = new Date();
+  await reservation.save();
+
+  // Update user statistics (decrement totalReservations)
+  try {
+    await User.findByIdAndUpdate(req.user._id, {
+      $inc: {
+        totalReservations: -1,
+      },
+    });
+    console.log('User statistics updated for cancelled reservation');
+  } catch (error) {
+    console.error('Error updating user statistics:', error);
+  }
+
+  res.status(200).json({
+    success: true,
+    message: 'Reservation cancelled successfully',
+    data: reservation,
+  });
+});
+
 module.exports = {
   createReservation,
   getUserReservations,
   getAdminReservations,
   updateAdminReservation,
+  updateUserReservation,
+  cancelUserReservation,
   getReservationStats,
 };
