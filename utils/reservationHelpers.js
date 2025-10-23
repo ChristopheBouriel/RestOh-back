@@ -1,4 +1,5 @@
 const { getTimeFromSlot } = require('./timeSlots');
+const Table = require('../models/Table');
 
 /**
  * Create a Date object from reservation date and slot number
@@ -161,11 +162,144 @@ const validateReservationUpdate = (reservation, updateData, now = new Date()) =>
   };
 };
 
+// === TABLE BOOKING BUSINESS LOGIC ===
+
+/**
+ * Get bookings for a specific date from a table document
+ * @param {object} table - Table document
+ * @param {Date|string} date - Target date
+ * @returns {object|null} Booking object or null if not found
+ */
+const getTableBookingsForDate = (table, date) => {
+  const targetDate = new Date(date);
+  targetDate.setHours(0, 0, 0, 0);
+
+  return table.tableBookings.find(booking => {
+    const bookingDate = new Date(booking.date);
+    bookingDate.setHours(0, 0, 0, 0);
+    return bookingDate.getTime() === targetDate.getTime();
+  });
+};
+
+/**
+ * Check if a slot is available for a specific date on a table
+ * @param {object} table - Table document
+ * @param {Date|string} date - Target date
+ * @param {number} slot - Slot number
+ * @returns {boolean} True if slot is available
+ */
+const isTableSlotAvailable = (table, date, slot) => {
+  const booking = getTableBookingsForDate(table, date);
+  return !booking || !booking.bookedSlots.includes(slot);
+};
+
+/**
+ * Add booking for a specific date and slot to a table
+ * @param {object} table - Table document
+ * @param {Date|string} date - Target date
+ * @param {number} slot - Slot number
+ * @returns {Promise} Save operation promise
+ */
+const addTableBooking = async (table, date, slot) => {
+  const targetDate = new Date(date);
+  targetDate.setHours(0, 0, 0, 0);
+
+  let booking = getTableBookingsForDate(table, targetDate);
+
+  if (!booking) {
+    booking = {
+      date: targetDate,
+      bookedSlots: [slot]
+    };
+    table.tableBookings.push(booking);
+  } else {
+    if (!booking.bookedSlots.includes(slot)) {
+      booking.bookedSlots.push(slot);
+      booking.bookedSlots.sort();
+    }
+  }
+
+  return table.save();
+};
+
+/**
+ * Remove booking for a specific date and slot from a table
+ * @param {object} table - Table document
+ * @param {Date|string} date - Target date
+ * @param {number} slot - Slot number
+ * @returns {Promise} Save operation promise
+ */
+const removeTableBooking = async (table, date, slot) => {
+  const targetDate = new Date(date);
+  targetDate.setHours(0, 0, 0, 0);
+
+  const booking = getTableBookingsForDate(table, targetDate);
+
+  if (booking) {
+    booking.bookedSlots = booking.bookedSlots.filter(s => s !== slot);
+
+    if (booking.bookedSlots.length === 0) {
+      table.tableBookings = table.tableBookings.filter(b =>
+        new Date(b.date).getTime() !== targetDate.getTime()
+      );
+    }
+  }
+
+  return table.save();
+};
+
+/**
+ * Find available tables for a specific date and slot
+ * @param {Date|string} date - Target date
+ * @param {number} slot - Slot number
+ * @param {number} requiredCapacity - Minimum table capacity required
+ * @returns {Promise<Array>} Array of available table documents
+ */
+const findAvailableTables = async (date, slot, requiredCapacity = 1) => {
+  const tables = await Table.find({
+    isActive: true,
+    capacity: { $gte: requiredCapacity }
+  });
+
+  return tables.filter(table => isTableSlotAvailable(table, date, slot));
+};
+
+/**
+ * Get table availability for a specific date
+ * @param {Date|string} date - Target date
+ * @returns {Promise<Array>} Array of availability information for all active tables
+ */
+const getTableAvailability = async (date) => {
+  const tables = await Table.find({ isActive: true }).sort({ tableNumber: 1 });
+
+  return tables.map(table => {
+    const booking = getTableBookingsForDate(table, date);
+    const bookedSlots = booking ? booking.bookedSlots : [];
+    const availableSlots = [1, 2, 3, 4, 5, 6, 7, 8, 9].filter(slot =>
+      !bookedSlots.includes(slot)
+    );
+
+    return {
+      tableNumber: table.tableNumber,
+      capacity: table.capacity,
+      bookedSlots,
+      availableSlots,
+      isFullyBooked: availableSlots.length === 0
+    };
+  });
+};
+
 module.exports = {
   createReservationDateTime,
   getHoursDifference,
   canModifyReservation,
   isValidNewReservationTime,
   canCancelReservation,
-  validateReservationUpdate
+  validateReservationUpdate,
+  getTableBookingsForDate,
+  isTableSlotAvailable,
+  addTableBooking,
+  removeTableBooking,
+  findAvailableTables,
+  getTableAvailability
 };
