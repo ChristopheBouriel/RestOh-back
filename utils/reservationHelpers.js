@@ -265,7 +265,8 @@ const removeTableBooking = async (table, date, slot) => {
 const findAvailableTables = async (date, slot, requiredCapacity = 1) => {
   const tables = await Table.find({
     isActive: true,
-    capacity: { $gte: requiredCapacity }
+    // TODO add business logic, for now we do noy care about capacity
+    capacity: { $gte: 1 }
   });
 
   const availableTables = tables.filter(table => isTableSlotAvailable(table, date, slot)).map(table => table.tableNumber);
