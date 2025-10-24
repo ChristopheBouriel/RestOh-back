@@ -190,7 +190,12 @@ const getTableBookingsForDate = (table, date) => {
  */
 const isTableSlotAvailable = (table, date, slot) => {
   const booking = getTableBookingsForDate(table, date);
-  return !booking || !booking.bookedSlots.includes(slot);
+  if (!booking) return true;
+
+  // Check if any of the 3 consecutive slots are already booked
+  return !booking.bookedSlots.includes(slot) &&
+         !booking.bookedSlots.includes(slot + 1) &&
+         !booking.bookedSlots.includes(slot + 2);
 };
 
 /**
@@ -206,15 +211,17 @@ const addTableBooking = async (table, date, slot) => {
 
   let booking = getTableBookingsForDate(table, targetDate);
 
+  let slots = [slot, slot + 1, slot + 2];
+
   if (!booking) {
     booking = {
       date: targetDate,
-      bookedSlots: [slot]
+      bookedSlots: slots
     };
     table.tableBookings.push(booking);
   } else {
-    if (!booking.bookedSlots.includes(slot)) {
-      booking.bookedSlots.push(slot);
+    if (!booking.bookedSlots.includes(slot) && !booking.bookedSlots.includes(slot + 1) && !booking.bookedSlots.includes(slot + 2)) {
+      booking.bookedSlots.push(...slots);
       booking.bookedSlots.sort();
     }
   }
@@ -236,7 +243,7 @@ const removeTableBooking = async (table, date, slot) => {
   const booking = getTableBookingsForDate(table, targetDate);
 
   if (booking) {
-    booking.bookedSlots = booking.bookedSlots.filter(s => s !== slot);
+    booking.bookedSlots = booking.bookedSlots.filter(s => s !== slot && s !== slot + 1 && s !== slot + 2);
 
     if (booking.bookedSlots.length === 0) {
       table.tableBookings = table.tableBookings.filter(b =>
@@ -261,7 +268,13 @@ const findAvailableTables = async (date, slot, requiredCapacity = 1) => {
     capacity: { $gte: requiredCapacity }
   });
 
-  return tables.filter(table => isTableSlotAvailable(table, date, slot));
+  const availableTables = tables.filter(table => isTableSlotAvailable(table, date, slot)).map(table => table.tableNumber);
+  const allTables = Array(12).fill().map((_, index) => index + 1);
+  const occupiedTables = allTables.filter(x => !availableTables.includes(x));
+  return {
+    availableTables,
+    occupiedTables
+  }
 };
 
 /**
@@ -276,7 +289,7 @@ const getTableAvailability = async (date) => {
     const booking = getTableBookingsForDate(table, date);
     const bookedSlots = booking ? booking.bookedSlots : [];
     const availableSlots = [1, 2, 3, 4, 5, 6, 7, 8, 9].filter(slot =>
-      !bookedSlots.includes(slot)
+      isTableSlotAvailable(table, date, slot)
     );
 
     return {

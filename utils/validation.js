@@ -44,7 +44,7 @@ const validateReservation = (data) => {
     date: Joi.date().min('now').required(),
     slot: Joi.number().required(),
     guests: Joi.number().integer().min(1).max(20).required(),
-    tableNumber: Joi.array().items(Joi.number().integer()).required(),
+    tableNumber: Joi.array().items(Joi.number().integer()).optional(),
     specialRequest: Joi.string().max(200).allow(null).optional(),
     contactPhone: Joi.string().pattern(/^[0-9]{10}$/).required(),
   });

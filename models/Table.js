@@ -51,4 +51,25 @@ const tableSchema = new mongoose.Schema({
   toObject: { virtuals: true }
 });
 
+tableSchema.index({ tableNumber: 1 });
+tableSchema.index({ 'tableBookings.date': 1 });
+
+tableSchema.statics.initializeTables = async function() {
+  const existingCount = await this.countDocuments();
+
+  if (existingCount === 0) {
+    const tables = [];
+    for (let i = 1; i <= 22; i++) {
+      tables.push({
+        tableNumber: i,
+        capacity: i <= 10 ? 4 : 6,
+        tableBookings: []
+      });
+    }
+
+    await this.insertMany(tables);
+    console.log('✅ Initialized 22 tables successfully');
+  }
+};
+
 module.exports = mongoose.model('Table', tableSchema);

@@ -49,8 +49,7 @@ const ReservationSchema = new mongoose.Schema({
   tableNumber: [{
     type: Number,
     min: [1, 'Table number must be at least 1'],
-    max: [20, 'Table number cannot exceed 20'],
-    default: null,
+    max: [22, 'Table number cannot exceed 22'],
   }],
   specialRequest: {
     type: String,

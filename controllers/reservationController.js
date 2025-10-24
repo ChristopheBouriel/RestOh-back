@@ -5,8 +5,11 @@ const { validateReservation } = require('../utils/validation');
 const { isValidSlot } = require('../utils/timeSlots');
 const {
   validateReservationUpdate,
-  canCancelReservation
+  canCancelReservation,
+  addTableBooking,
+  removeTableBooking
 } = require('../utils/reservationHelpers');
+const Table = require('../models/Table');
 
 // @desc    Create new reservation
 // @route   POST /api/reservations
@@ -38,6 +41,23 @@ const createReservation = asyncHandler(async (req, res) => {
 
   const reservation = new Reservation(reservationData);
   await reservation.save();
+
+  // If tableNumber array is provided, update table bookings
+  if (tableNumber && tableNumber.length > 0) {
+    try {
+      for (const tableNum of tableNumber) {
+        const table = await Table.findOne({ tableNumber: parseInt(tableNum) });
+        if (table) {
+          await addTableBooking(table, date, slot);
+          console.log(`Table ${tableNum} booked for reservation ${reservation._id}`);
+        } else {
+          console.warn(`Table ${tableNum} not found when creating reservation`);
+        }
+      }
+    } catch (error) {
+      console.error('Error updating table bookings:', error);
+    }
+  }
 
   // Update user statistics
   try {
@@ -183,6 +203,68 @@ const updateAdminReservation = asyncHandler(async (req, res) => {
     });
   }
 
+  // Get the original reservation to handle table changes
+  const originalReservation = await Reservation.findById(req.params.id);
+  if (!originalReservation) {
+    return res.status(404).json({
+      success: false,
+      message: 'Reservation not found',
+    });
+  }
+
+  // Handle table number changes
+  if (tableNumber && JSON.stringify(tableNumber) !== JSON.stringify(originalReservation.tableNumber)) {
+    try {
+      // Remove booking from old tables if they exist
+      if (originalReservation.tableNumber && originalReservation.tableNumber.length > 0) {
+        for (const oldTableNum of originalReservation.tableNumber) {
+          const oldTable = await Table.findOne({ tableNumber: parseInt(oldTableNum) });
+          if (oldTable) {
+            await removeTableBooking(oldTable, originalReservation.date, originalReservation.slot);
+            console.log(`Removed booking from table ${oldTableNum}`);
+          }
+        }
+      }
+
+      // Add booking to new tables
+      if (tableNumber && tableNumber.length > 0) {
+        for (const newTableNum of tableNumber) {
+          const newTable = await Table.findOne({ tableNumber: parseInt(newTableNum) });
+          if (newTable) {
+            await addTableBooking(newTable, originalReservation.date, originalReservation.slot);
+            console.log(`Added booking to table ${newTableNum}`);
+          } else {
+            return res.status(400).json({
+              success: false,
+              message: `Table ${newTableNum} not found`,
+            });
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error updating table bookings:', error);
+      return res.status(500).json({
+        success: false,
+        message: 'Error updating table bookings',
+      });
+    }
+  }
+
+  // Handle status changes (especially cancellation)
+  if (status === 'cancelled' && originalReservation.status !== 'cancelled' && originalReservation.tableNumber && originalReservation.tableNumber.length > 0) {
+    try {
+      for (const tableNum of originalReservation.tableNumber) {
+        const table = await Table.findOne({ tableNumber: parseInt(tableNum) });
+        if (table) {
+          await removeTableBooking(table, originalReservation.date, originalReservation.slot);
+          console.log(`Removed booking from table ${tableNum} due to cancellation`);
+        }
+      }
+    } catch (error) {
+      console.error('Error removing table bookings on cancellation:', error);
+    }
+  }
+
   const reservation = await Reservation.findByIdAndUpdate(
     req.params.id,
     {
@@ -193,13 +275,6 @@ const updateAdminReservation = asyncHandler(async (req, res) => {
     },
     { new: true, runValidators: true }
   ).populate('userId', 'name email phone');
-
-  if (!reservation) {
-    return res.status(404).json({
-      success: false,
-      message: 'Reservation not found',
-    });
-  }
 
   res.status(200).json({
     success: true,
@@ -288,6 +363,30 @@ const updateUserReservation = asyncHandler(async (req, res) => {
 
   const { guests, specialRequest, contactPhone } = req.body;
 
+  // Handle date/slot changes for table bookings
+  if ((date || slot) && reservation.tableNumber && reservation.tableNumber.length > 0) {
+    try {
+      for (const tableNum of reservation.tableNumber) {
+        const table = await Table.findOne({ tableNumber: parseInt(tableNum) });
+        if (table) {
+          // Remove old booking
+          await removeTableBooking(table, reservation.date, reservation.slot);
+          // Add new booking with updated date/slot
+          const newDate = date || reservation.date;
+          const newSlot = slot || reservation.slot;
+          await addTableBooking(table, newDate, newSlot);
+          console.log(`Updated table ${tableNum} booking from ${reservation.date}/${reservation.slot} to ${newDate}/${newSlot}`);
+        }
+      }
+    } catch (error) {
+      console.error('Error updating table bookings:', error);
+      return res.status(500).json({
+        success: false,
+        message: 'Error updating table bookings',
+      });
+    }
+  }
+
   // Validate input if provided
   const updateData = {};
   if (date) updateData.date = date;
@@ -357,6 +456,23 @@ const cancelUserReservation = asyncHandler(async (req, res) => {
   reservation.status = 'cancelled';
   reservation.updatedAt = new Date();
   await reservation.save();
+
+  // If tableNumber array is assigned, remove table bookings
+  if (reservation.tableNumber && reservation.tableNumber.length > 0) {
+    try {
+      for (const tableNum of reservation.tableNumber) {
+        const table = await Table.findOne({ tableNumber: parseInt(tableNum) });
+        if (table) {
+          await removeTableBooking(table, reservation.date, reservation.slot);
+          console.log(`Table ${tableNum} booking removed for cancelled reservation ${reservation._id}`);
+        } else {
+          console.warn(`Table ${tableNum} not found when cancelling reservation`);
+        }
+      }
+    } catch (error) {
+      console.error('Error removing table bookings:', error);
+    }
+  }
 
   // Update user statistics (decrement totalReservations)
   try {
